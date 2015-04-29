@@ -12,7 +12,7 @@
 - **port**: FTP server port number (integer, default: 21)
 - **user**: user name to login (string, optional)
 - **password**: password to login (string, default: `""`)
-- **path_prefix** prefix of target keys (string, required)
+- **path_prefix** prefix of target files (string, required)
 - **passive_mode**: use passive mode (boolean, default: true)
 - **ascii_mode**: use ASCII mode instead of binary mode (boolean, default: false)
 

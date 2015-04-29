@@ -36,7 +36,7 @@ task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
 
 task gemPush(type: JRubyExec, dependsOn: ["gem"]) {
     jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "push"
-    script "${project.name}-${project.version}.gem"
+    script "pkg/${project.name}-${project.version}.gem"
 }
 
 task "package"(dependsOn: ["gemspec", "classpath"]) << {
@@ -53,8 +53,8 @@ Gem::Specification.new do |spec|
   spec.name          = "${project.name}"
   spec.version       = "${project.version}"
   spec.authors       = ["Sadayuki Furuhashi"]
-  spec.summary       = %[Ftp file input plugin for Embulk]
-  spec.description   = %[Reads files stored on Ftp.]
+  spec.summary       = %[FTP file input plugin for Embulk]
+  spec.description   = %[Reads files stored on a FTP server.]
   spec.email         = ["frsyuki@gmail.com"]
   spec.licenses      = ["Apache 2.0"]
   spec.homepage      = "https://github.com/embulk/embulk-input-ftp"
