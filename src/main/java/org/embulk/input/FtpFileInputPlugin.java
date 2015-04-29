@@ -318,7 +318,7 @@ public class FtpFileInputPlugin
 
             for (FTPFile file : client.list()) {
                 if (file.getName().startsWith(fileNamePrefix)) {
-                    listFilesRecursive(client, currentDirectory, file, builder);
+                    listFilesRecursive(client, currentDirectory, file, lastPath, builder);
                 }
             }
 
@@ -351,7 +351,7 @@ public class FtpFileInputPlugin
     }
 
     private static void listFilesRecursive(FTPClient client,
-            String baseDirectoryPath, FTPFile file,
+            String baseDirectoryPath, FTPFile file, Optional<String> lastPath,
             ImmutableList.Builder<String> builder)
         throws IOException, FTPException, FTPIllegalReplyException, FTPDataTransferException, FTPAbortedException, FTPListParseException
     {
@@ -360,6 +360,10 @@ public class FtpFileInputPlugin
         }
         String path = baseDirectoryPath + file.getName();
 
+        if (lastPath.isPresent() && path.compareTo(lastPath.get()) <= 0) {
+            return;
+        }
+
         switch (file.getType()) {
         case FTPFile.TYPE_FILE:
             builder.add(path);
@@ -367,7 +371,7 @@ public class FtpFileInputPlugin
         case FTPFile.TYPE_DIRECTORY:
             client.changeDirectory(path);
             for (FTPFile subFile : client.list()) {
-                listFilesRecursive(client, path, subFile, builder);
+                listFilesRecursive(client, path, subFile, lastPath, builder);
             }
             client.changeDirectory(baseDirectoryPath);
             break;
