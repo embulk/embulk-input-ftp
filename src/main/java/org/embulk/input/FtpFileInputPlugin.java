@@ -9,6 +9,14 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
+import java.security.SecureRandom;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.slf4j.Logger;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.collect.ImmutableList;
@@ -63,8 +71,8 @@ public class FtpFileInputPlugin
         public String getHost();
 
         @Config("port")
-        @ConfigDefault("21")
-        public int getPort();
+        @ConfigDefault("null")
+        public Optional<Integer> getPort();
 
         @Config("user")
         @ConfigDefault("null")
@@ -81,6 +89,10 @@ public class FtpFileInputPlugin
         @Config("ascii_mode")
         @ConfigDefault("false")
         public boolean getAsciiMode();
+
+        @Config("ssl")
+        @ConfigDefault("false")
+        public boolean getSsl();
 
         public List<String> getFiles();
         public void setFiles(List<String> files);
@@ -144,7 +156,10 @@ public class FtpFileInputPlugin
     {
         FTPClient client = new FTPClient();
         try {
-            // TODO SSL
+            if (task.getSsl()) {
+                client.setSSLSocketFactory(newSSLSocketFactory(task));
+                client.setSecurity(FTPClient.SECURITY_FTPS);
+            }
 
             client.addCommunicationListener(new LoggingCommunicationListner(log));
 
@@ -164,7 +179,9 @@ public class FtpFileInputPlugin
             //client.setAutodetectUTF8
 
             log.info("Connecting to "+task.getHost());
-            client.connect(task.getHost(), task.getPort());
+            if (task.getPort().isPresent()) {
+                client.connect(task.getHost(), task.getPort().get());
+            }
 
             if (task.getUser().isPresent()) {
                 log.info("Logging in with user "+task.getUser().get());
@@ -222,6 +239,40 @@ public class FtpFileInputPlugin
             } catch (IOException ex) {
                 // do nothing
             }
+        }
+    }
+
+    private static SSLSocketFactory newSSLSocketFactory(PluginTask task)
+    {
+        // TODO certificate check
+
+        TrustManager[] trustManager = new TrustManager[] {
+            new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers()
+                {
+                    return null;
+                }
+
+                public void checkClientTrusted(X509Certificate[] certs, String authType)
+                {
+                }
+
+                public void checkServerTrusted(X509Certificate[] certs, String authType)
+                {
+                }
+            }
+        };
+
+        try {
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, trustManager, new SecureRandom());
+            return context.getSocketFactory();
+
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex);
+
+        } catch (KeyManagementException ex) {
+            throw new RuntimeException(ex);
         }
     }
 

@@ -9,12 +9,14 @@
 ## Configuration
 
 - **host**: FTP server address (string, required)
-- **port**: FTP server port number (integer, default: 21)
+- **port**: FTP server port number (integer, default: `21`. `990` if `ssl` is true)
 - **user**: user name to login (string, optional)
 - **password**: password to login (string, default: `""`)
 - **path_prefix** prefix of target files (string, required)
 - **passive_mode**: use passive mode (boolean, default: true)
 - **ascii_mode**: use ASCII mode instead of binary mode (boolean, default: false)
+- **ssl**: use FTPS (SSL encryption). (boolean, default: false)
+  - Currently, it doesn't support certificate checking. Any certificate given by the remote host is trusted.
 
 ## Example
 
