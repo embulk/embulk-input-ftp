@@ -181,9 +181,9 @@ public class BlockingTransfer
             notifyAll();
         }
 
-        private boolean waitForWritable() throws IOException
+        private synchronized boolean waitForWritable() throws IOException
         {
-            while(buffer != null) {
+            while (buffer != null) {
                 if (exception != null) {
                     if (exception instanceof EOFException) {
                         return false;

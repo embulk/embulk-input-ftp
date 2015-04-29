@@ -13,15 +13,17 @@
 - **user**: user name to login (string, optional)
 - **password**: password to login (string, default: `""`)
 - **path_prefix** prefix of target keys (string, required)
-- **passive_mode**: use passive mode (integer, default: true)
+- **passive_mode**: use passive mode (boolean, default: true)
+- **ascii_mode**: use ASCII mode instead of binary mode (boolean, default: false)
 
 ## Example
 
 ```yaml
 in:
   type: ftp
-  host: my-ftp-server.example.net
-  user: mylogin
+  host: ftp.example.net
+  port: 21
+  user: anonymous
   password: "mypassword"
   path_prefix: /ftp/file/path/prefix
 ```
