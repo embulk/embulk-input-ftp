@@ -56,8 +56,8 @@ Gem::Specification.new do |spec|
   spec.summary       = %[Ftp file input plugin for Embulk]
   spec.description   = %[Reads files stored on Ftp.]
   spec.email         = ["frsyuki@gmail.com"]
-  spec.licenses      = ["MIT"]
-  # TODO set this: spec.homepage      = "https://github.com/frsyuki/embulk-input-ftp"
+  spec.licenses      = ["Apache 2.0"]
+  spec.homepage      = "https://github.com/embulk/embulk-input-ftp"
 
   spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
   spec.test_files    = spec.files.grep(%r"^(test|spec)/")

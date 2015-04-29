@@ -1,4 +1,4 @@
-# Ftp file input plugin for Embulk
+# FTP file input plugin for Embulk
 
 ## Overview
 
