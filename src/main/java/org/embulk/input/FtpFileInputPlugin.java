@@ -534,7 +534,7 @@ public class FtpFileInputPlugin
             this.client = newFTPClient(log, task);
             this.executor = Executors.newCachedThreadPool(
                     new ThreadFactoryBuilder()
-                        .setNameFormat("embulk-input-ftp-%d")
+                        .setNameFormat("embulk-input-ftp-transfer-%d")
                         .setDaemon(true)
                         .build());
             this.path = task.getFiles().get(taskIndex);
