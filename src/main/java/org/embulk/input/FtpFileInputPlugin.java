@@ -507,15 +507,15 @@ public class FtpFileInputPlugin
         return Channels.newInputStream(t.getReaderChannel());
     }
 
-    private static class FtpRetryableOpener
-            implements RetryableInputStream.Opener
+    private static class FtpInputStreamReopener
+            implements RetryableInputStream.Reopener
     {
         private final Logger log;
         private final FTPClient client;
         private final ExecutorService executor;
         private final String path;
 
-        public FtpRetryableOpener(Logger log, FTPClient client, ExecutorService executor, String path)
+        public FtpInputStreamReopener(Logger log, FTPClient client, ExecutorService executor, String path)
         {
             this.log = log;
             this.client = client;
@@ -524,7 +524,7 @@ public class FtpFileInputPlugin
         }
 
         @Override
-        public InputStream open(final long offset, final Exception exception) throws IOException
+        public InputStream reopen(final long offset, final Exception closedCause) throws IOException
         {
             try {
                 return retryExecutor()
@@ -535,7 +535,7 @@ public class FtpFileInputPlugin
                         @Override
                         public InputStream call() throws InterruptedIOException
                         {
-                            log.warn(String.format("FTP read failed. Retrying GET request with %,d bytes offset", offset), exception);
+                            log.warn(String.format("FTP read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
                             return startDownload(log, client, path, offset, executor);
                         }
 
@@ -605,7 +605,7 @@ public class FtpFileInputPlugin
 
             return new RetryableInputStream(
                     startDownload(log, client, path, 0L, executor),
-                    new FtpRetryableOpener(log, client, executor, path));
+                    new FtpInputStreamReopener(log, client, executor, path));
         }
 
         @Override
