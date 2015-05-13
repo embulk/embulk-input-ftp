@@ -97,13 +97,13 @@ public class SSLPlugins
         }
 
         @JsonProperty("verifyMode")
-        VerifyMode getVerifyMode()
+        private VerifyMode getVerifyMode()
         {
             return verifyMode;
         }
 
         @JsonProperty("certificates")
-        List<byte[]> getCertData()
+        private List<byte[]> getCertData()
         {
             return Lists.transform(certificates, new Function<X509Certificate, byte[]>() {
                 public byte[] apply(X509Certificate cert)
