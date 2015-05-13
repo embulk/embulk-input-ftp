@@ -96,6 +96,12 @@ public class SSLPlugins
             this.certificates = certificates;
         }
 
+        @JsonProperty("verifyMode")
+        VerifyMode getVerifyMode()
+        {
+            return verifyMode;
+        }
+
         @JsonProperty("certificates")
         List<byte[]> getCertData()
         {

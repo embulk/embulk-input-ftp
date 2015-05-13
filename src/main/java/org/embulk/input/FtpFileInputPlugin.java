@@ -93,7 +93,7 @@ public class FtpFileInputPlugin
         public void setFiles(List<String> files);
 
         public SSLPluginConfig getSSLConfig();
-        public SSLPluginConfig setSSLConfig(SSLPluginConfig config);
+        public void setSSLConfig(SSLPluginConfig config);
 
         @ConfigInject
         public BufferAllocator getBufferAllocator();
