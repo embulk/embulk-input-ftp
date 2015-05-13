@@ -46,11 +46,11 @@ import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
 import org.embulk.spi.util.InputStreamFileInput;
+import org.embulk.spi.util.ResumableInputStream;
+import org.embulk.spi.util.RetryExecutor.Retryable;
+import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
 import org.embulk.input.ftp.BlockingTransfer;
-import org.embulk.input.ftp.RetryableInputStream;
-import org.embulk.input.ftp.RetryExecutor.Retryable;
-import org.embulk.input.ftp.RetryExecutor.RetryGiveupException;
-import static org.embulk.input.ftp.RetryExecutor.retryExecutor;
+import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 public class FtpFileInputPlugin
         implements FileInputPlugin
@@ -508,7 +508,7 @@ public class FtpFileInputPlugin
     }
 
     private static class FtpInputStreamReopener
-            implements RetryableInputStream.Reopener
+            implements ResumableInputStream.Reopener
     {
         private final Logger log;
         private final FTPClient client;
@@ -603,7 +603,7 @@ public class FtpFileInputPlugin
             }
             opened = true;
 
-            return new RetryableInputStream(
+            return new ResumableInputStream(
                     startDownload(log, client, path, 0L, executor),
                     new FtpInputStreamReopener(log, client, executor, path));
         }
