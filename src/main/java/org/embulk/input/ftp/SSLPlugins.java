@@ -5,14 +5,17 @@ import java.io.Reader;
 import java.io.FileReader;
 import java.io.StringReader;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateEncodingException;
 import java.security.SecureRandom;
 import java.security.KeyManagementException;
 import javax.net.ssl.SSLContext;
@@ -20,14 +23,20 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import com.google.common.base.Optional;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import sun.security.validator.KeyStores;
 import org.bouncycastle.openssl.PEMParser;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
 
-public class SSLPlugins {
+public class SSLPlugins
+{
     // SSLPlugins is only for SSL clients. SSL server implementation is out ouf scope.
 
     public interface SSLPluginTask
@@ -43,6 +52,77 @@ public class SSLPlugins {
         @Config("ssl_trusted_ca_cert_data")
         @ConfigDefault("null")
         public Optional<String> getSslTrustedCaCertData();
+    }
+
+    private static enum VerifyMode
+    {
+        NO_VERIFY,
+        CERTIFICATES,
+        JVM_DEFAULT;
+    }
+
+    public static class SSLPluginConfig
+    {
+        static SSLPluginConfig NO_VERIFY = new SSLPluginConfig(VerifyMode.NO_VERIFY, ImmutableList.<byte[]>of());
+        static SSLPluginConfig JVM_DEFAULT = new SSLPluginConfig(VerifyMode.JVM_DEFAULT, ImmutableList.<byte[]>of());
+
+        private final VerifyMode verifyMode;
+        private final List<X509Certificate> certificates;
+
+        @JsonCreator
+        private SSLPluginConfig(
+            @JsonProperty("verifyMode") VerifyMode verifyMode,
+            @JsonProperty("certificates") List<byte[]> certificates)
+        {
+            this.verifyMode = verifyMode;
+            this.certificates = ImmutableList.copyOf(
+                    Lists.transform(certificates, new Function<byte[], X509Certificate>() {
+                        public X509Certificate apply(byte[] data)
+                        {
+                            try (ByteArrayInputStream in = new ByteArrayInputStream(data)) {
+                                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                                return (X509Certificate) cf.generateCertificate(in);
+                            } catch (IOException | CertificateException ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        }
+                    })
+                );
+        }
+
+        SSLPluginConfig(List<X509Certificate> certificates)
+        {
+            this.verifyMode = VerifyMode.CERTIFICATES;
+            this.certificates = certificates;
+        }
+
+        @JsonProperty("certificates")
+        List<byte[]> getCertData()
+        {
+            return Lists.transform(certificates, new Function<X509Certificate, byte[]>() {
+                public byte[] apply(X509Certificate cert)
+                {
+                    try {
+                        return cert.getEncoded();
+                    } catch (CertificateEncodingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+        }
+
+        @JsonIgnore
+        public X509TrustManager newTrustManager()
+        {
+            switch (verifyMode) {
+            case NO_VERIFY:
+                return getNoVerifyTrustManager();
+            case CERTIFICATES:
+                return newVerifyServerCertificateIssuersTrustManager(certificates);
+            default: // JVM_DEFAULT
+                return newVerifyServerCertificateIssuersTrustManager(getJvmTrustedCaCerts());
+            }
+        }
     }
 
     private static class NoVerifyTrustManager
@@ -181,42 +261,37 @@ public class SSLPlugins {
         NO_VERIFY;
     };
 
-    public static X509TrustManager newTrustManager(SSLPluginTask task)
+    public static SSLPluginConfig configure(SSLPluginTask task)
     {
-        return newTrustManager(task, DefaultVerifyMode.VERIFY_BY_JVM_TRUSTED_CA_CERTS);
+        return configure(task, DefaultVerifyMode.VERIFY_BY_JVM_TRUSTED_CA_CERTS);
     }
 
-    public static X509TrustManager newTrustManager(SSLPluginTask task, DefaultVerifyMode defaultVerifyMode)
+    public static SSLPluginConfig configure(SSLPluginTask task, DefaultVerifyMode defaultVerifyMode)
     {
         Optional<List<X509Certificate>> certs = readX509Certificates(task);
         if (certs.isPresent()) {
-            return newVerifyServerCertificateIssuersTrustManager(certs.get());
+            return new SSLPluginConfig(certs.get());
         } else if (task.getSslNoVerify().isPresent()) {
             if (task.getSslNoVerify().get()) {
-                return getNoVerifyTrustManager();
+                return SSLPluginConfig.NO_VERIFY;
             } else {
-                return newVerifyServerCertificateIssuersTrustManager(getJvmTrustedCaCerts());
+                return SSLPluginConfig.JVM_DEFAULT;
             }
         } else {
             switch (defaultVerifyMode) {
             case VERIFY_BY_JVM_TRUSTED_CA_CERTS:
-                return newVerifyServerCertificateIssuersTrustManager(getJvmTrustedCaCerts());
+                return SSLPluginConfig.JVM_DEFAULT;
             case NO_VERIFY:
-                return getNoVerifyTrustManager();
+                return SSLPluginConfig.NO_VERIFY;
             default:
                 throw new AssertionError();
             }
         }
     }
 
-    public static SSLSocketFactory newSSLSocketFactory(SSLPluginTask task)
+    public static SSLSocketFactory newSSLSocketFactory(SSLPluginConfig config)
     {
-        return newSSLSocketFactory(task, DefaultVerifyMode.VERIFY_BY_JVM_TRUSTED_CA_CERTS);
-    }
-
-    public static SSLSocketFactory newSSLSocketFactory(SSLPluginTask task, DefaultVerifyMode defaultVerifyMode)
-    {
-        TrustManager trustManager = newTrustManager(task, defaultVerifyMode);
+        TrustManager trustManager = config.newTrustManager();
 
         try {
             SSLContext context = SSLContext.getInstance("TLS");

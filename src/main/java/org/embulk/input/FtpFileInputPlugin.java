@@ -43,8 +43,9 @@ import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
 import org.embulk.input.ftp.BlockingTransfer;
 import org.embulk.input.ftp.SSLPlugins;
+import org.embulk.input.ftp.SSLPlugins.SSLPluginTask;
+import org.embulk.input.ftp.SSLPlugins.SSLPluginConfig;
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
-import static org.embulk.input.ftp.SSLPlugins.newSSLSocketFactory;
 
 public class FtpFileInputPlugin
         implements FileInputPlugin
@@ -88,16 +89,11 @@ public class FtpFileInputPlugin
         @ConfigDefault("false")
         public boolean getSsl();
 
-        @Config("ssl_trusted_ca_cert_file")
-        @ConfigDefault("null")
-        public Optional<String> getSslTrustedCaCertFile();
-
-        @Config("ssl_trusted_ca_cert_data")
-        @ConfigDefault("null")
-        public Optional<String> getSslTrustedCaCertData();
-
         public List<String> getFiles();
         public void setFiles(List<String> files);
+
+        public SSLPluginConfig getSSLConfig();
+        public SSLPluginConfig setSSLConfig(SSLPluginConfig config);
 
         @ConfigInject
         public BufferAllocator getBufferAllocator();
@@ -107,6 +103,8 @@ public class FtpFileInputPlugin
     public ConfigDiff transaction(ConfigSource config, FileInputPlugin.Control control)
     {
         PluginTask task = config.loadConfig(PluginTask.class);
+
+        task.setSSLConfig(SSLPlugins.configure(task));
 
         // list files recursively
         List<String> files = listFiles(log, task);
@@ -159,7 +157,7 @@ public class FtpFileInputPlugin
         FTPClient client = new FTPClient();
         try {
             if (task.getSsl()) {
-                client.setSSLSocketFactory(newSSLSocketFactory(task));
+                client.setSSLSocketFactory(SSLPlugins.newSSLSocketFactory(task.getSSLConfig()));
                 client.setSecurity(FTPClient.SECURITY_FTPS);
             }
 
