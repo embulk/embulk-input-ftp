@@ -31,6 +31,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import sun.security.validator.KeyStores;
 import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
@@ -221,6 +223,7 @@ public class SSLPlugins
         }
 
         ImmutableList.Builder<X509Certificate> builder = ImmutableList.builder();
+        JcaX509CertificateConverter conv = new JcaX509CertificateConverter();
 
         try (PEMParser pemParser = new PEMParser(reader)) {
             while (true) {
@@ -230,8 +233,13 @@ public class SSLPlugins
                     break;
                 }
 
-                if (pem instanceof X509Certificate) {
-                    builder.add((X509Certificate) pem);
+                if (pem instanceof X509CertificateHolder) {
+                    try {
+                        X509Certificate cert = conv.getCertificate((X509CertificateHolder) pem);
+                        builder.add(cert);
+                    } catch (CertificateException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
             }
         } catch (IOException ex) {

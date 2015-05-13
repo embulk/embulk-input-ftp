@@ -32,6 +32,33 @@ in:
   path_prefix: /ftp/file/path/prefix
 ```
 
+With SSL:
+
+```yaml
+in:
+  type: ftp
+  host: ftp.example.net
+  port: 21
+  user: anonymous
+  password: "mypassword"
+  path_prefix: /ftp/file/path/prefix
+
+  ssl: true
+
+  #ssl_no_verify: true    # to disable server certificate verification
+
+  # if you use self-signed certificate, embed the PEM data
+  ssl_trusted_ca_cert_data: |
+      -----BEGIN CERTIFICATE-----
+      MIIFV...
+      ...
+      ...
+      -----END CERTIFICATE-----
+
+  # or set path to the pem file
+  ssl_trusted_ca_cert_file: /path/to/ca_cert.pem
+```
+
 ## Build
 
 ```
