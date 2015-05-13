@@ -9,14 +9,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
-import java.security.SecureRandom;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import org.slf4j.Logger;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.collect.ImmutableList;
@@ -50,7 +42,9 @@ import org.embulk.spi.util.ResumableInputStream;
 import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
 import org.embulk.input.ftp.BlockingTransfer;
+import org.embulk.input.ftp.SSLPlugins;
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
+import static org.embulk.input.ftp.SSLPlugins.newSSLSocketFactory;
 
 public class FtpFileInputPlugin
         implements FileInputPlugin
@@ -58,7 +52,7 @@ public class FtpFileInputPlugin
     private final Logger log = Exec.getLogger(FtpFileInputPlugin.class);
 
     public interface PluginTask
-            extends Task
+            extends Task, SSLPlugins.SSLPluginTask
     {
         @Config("path_prefix")
         public String getPathPrefix();
@@ -93,6 +87,14 @@ public class FtpFileInputPlugin
         @Config("ssl")
         @ConfigDefault("false")
         public boolean getSsl();
+
+        @Config("ssl_trusted_ca_cert_file")
+        @ConfigDefault("null")
+        public Optional<String> getSslTrustedCaCertFile();
+
+        @Config("ssl_trusted_ca_cert_data")
+        @ConfigDefault("null")
+        public Optional<String> getSslTrustedCaCertData();
 
         public List<String> getFiles();
         public void setFiles(List<String> files);
@@ -239,40 +241,6 @@ public class FtpFileInputPlugin
             } catch (IOException ex) {
                 // do nothing
             }
-        }
-    }
-
-    private static SSLSocketFactory newSSLSocketFactory(PluginTask task)
-    {
-        // TODO certificate check
-
-        TrustManager[] trustManager = new TrustManager[] {
-            new X509TrustManager() {
-                public X509Certificate[] getAcceptedIssuers()
-                {
-                    return null;
-                }
-
-                public void checkClientTrusted(X509Certificate[] certs, String authType)
-                {
-                }
-
-                public void checkServerTrusted(X509Certificate[] certs, String authType)
-                {
-                }
-            }
-        };
-
-        try {
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, trustManager, new SecureRandom());
-            return context.getSocketFactory();
-
-        } catch (NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);
-
-        } catch (KeyManagementException ex) {
-            throw new RuntimeException(ex);
         }
     }
 
