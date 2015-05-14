@@ -23,6 +23,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateParsingException;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.X509TrustManager;
@@ -34,7 +35,7 @@ import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import sun.security.util.HostnameChecker;
+import sun.security.ssl.SSLSocketImpl;
 
 public class TrustManagers
 {
@@ -184,26 +185,6 @@ public class TrustManagers
         }
     }
 
-    public static class SSLHostnameVerifyException
-            extends RuntimeException
-    {
-        public SSLHostnameVerifyException(String message)
-        {
-            super(message);
-        }
-
-        public SSLHostnameVerifyException(CertificateException cause)
-        {
-            super(cause);
-        }
-
-        @Override
-        public CertificateException getCause()
-        {
-            return (CertificateException) super.getCause();
-        }
-    }
-
     private static class VerifyHostNameSSLSocketFactory
             extends SSLSocketFactory
     {
@@ -233,7 +214,7 @@ public class TrustManagers
                 throws IOException
         {
             Socket sock = next.createSocket(s, host, port, autoClose);
-            verifyHostName(sock);
+            setSSLParameters(sock, false);
             return sock;
         }
 
@@ -242,7 +223,7 @@ public class TrustManagers
                 throws IOException, UnknownHostException
         {
             Socket sock = next.createSocket(host, port);
-            verifyHostName(sock);
+            setSSLParameters(sock, false);
             return sock;
         }
 
@@ -251,7 +232,7 @@ public class TrustManagers
                 throws IOException, UnknownHostException
         {
             Socket sock = next.createSocket(host, port, localHost, localPort);
-            verifyHostName(sock);
+            setSSLParameters(sock, false);
             return sock;
         }
 
@@ -260,7 +241,7 @@ public class TrustManagers
                 throws IOException
         {
             Socket sock = next.createSocket(host, port);
-            verifyHostName(sock);
+            setSSLParameters(sock, true);
             return sock;
         }
 
@@ -269,29 +250,25 @@ public class TrustManagers
                 throws IOException
         {
             Socket sock = next.createSocket(address, port, localAddress, localPort);
-            verifyHostName(sock);
+            setSSLParameters(sock, true);
             return sock;
         }
 
-        private void verifyHostName(Socket sock) throws IOException
+        private void setSSLParameters(Socket sock, boolean setHostname) throws IOException
         {
             if (sock instanceof SSLSocket) {
-                // TODO don't use sun.security.util.HostnameChecker;
-                HostnameChecker checker = HostnameChecker.getInstance(HostnameChecker.TYPE_TLS);
-                SSLSession session = ((SSLSocket) sock).getSession();
-                boolean matched = false;
-                for (Certificate cert : session.getPeerCertificates()) {
-                    if (cert instanceof X509Certificate) {
-                        try {
-                            checker.match(hostname, (X509Certificate) cert);
-                            matched = true;
-                        } catch (CertificateException ex) {
-                            throw new SSLHostnameVerifyException(ex);
-                        }
+                SSLSocket s = (SSLSocket) sock;
+                String identAlgorithm = s.getSSLParameters().getEndpointIdentificationAlgorithm();
+                if (identAlgorithm != null && identAlgorithm.equalsIgnoreCase("HTTPS")) {
+                    // hostname verification is already configured.
+                } else {
+                    if (setHostname && s instanceof SSLSocketImpl) {
+                        ((SSLSocketImpl) s).setHost(hostname);
                     }
-                }
-                if (!matched) {
-                    throw new SSLHostnameVerifyException("SSL peer does not provide valid X.509 certificates");
+                    SSLParameters params = s.getSSLParameters();
+                    params.setEndpointIdentificationAlgorithm("HTTPS");
+                    s.setSSLParameters(params);
+                    // s.startHandshake
                 }
             }
         }
