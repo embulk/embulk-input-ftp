@@ -34,9 +34,9 @@ public class SSLPlugins
 
     public interface SSLPluginTask
     {
-        @Config("ssl_no_verify")
+        @Config("ssl_verify")
         @ConfigDefault("null")
-        public Optional<Boolean> getSslNoVerify();
+        public Optional<Boolean> getSslVerify();
 
         @Config("ssl_verify_hostname")
         @ConfigDefault("true")
@@ -159,24 +159,16 @@ public class SSLPlugins
 
     public static SSLPluginConfig configure(SSLPluginTask task, DefaultVerifyMode defaultVerifyMode)
     {
-        Optional<List<X509Certificate>> certs = readTrustedCertificates(task);
-        if (certs.isPresent()) {
-            return new SSLPluginConfig(certs.get(), task.getSslVerifyHostname());
-        } else if (task.getSslNoVerify().isPresent()) {
-            if (task.getSslNoVerify().get()) {
-                return SSLPluginConfig.NO_VERIFY;
+        boolean verify = task.getSslVerify().or(defaultVerifyMode != DefaultVerifyMode.NO_VERIFY);
+        if (verify) {
+            Optional<List<X509Certificate>> certs = readTrustedCertificates(task);
+            if (certs.isPresent()) {
+                return new SSLPluginConfig(certs.get(), task.getSslVerifyHostname());
             } else {
                 return SSLPluginConfig.useJvmDefault(task.getSslVerifyHostname());
             }
         } else {
-            switch (defaultVerifyMode) {
-            case VERIFY_BY_JVM_TRUSTED_CA_CERTS:
-                return SSLPluginConfig.useJvmDefault(task.getSslVerifyHostname());
-            case NO_VERIFY:
-                return SSLPluginConfig.NO_VERIFY;
-            default:
-                throw new AssertionError();
-            }
+            return SSLPluginConfig.NO_VERIFY;
         }
     }
 

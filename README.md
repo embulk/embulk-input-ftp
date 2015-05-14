@@ -16,7 +16,7 @@
 - **passive_mode**: use passive mode (boolean, default: true)
 - **ascii_mode**: use ASCII mode instead of binary mode (boolean, default: false)
 - **ssl**: use FTPS (SSL encryption). (boolean, default: false)
-- **ssl_no_verify**: disable server certification verification. By default, connection fails if the server certification is not signed by one the CAs in JVM's default trusted CA list. (boolean, default: false)
+- **ssl_verify**: verify the certification provided by the server. By default, connection fails if the server certification is not signed by one the CAs in JVM's default trusted CA list. (boolean, default: true)
 - **ssl_verify_hostname**: verify server's hostname matches with provided certificate. (boolean, default: true)
 - **ssl_trusted_ca_cert_file**: if the server certification is not signed by a certificate authority, set path to the X.508 certification file (pem file) of a private CA (string, optional)
 - **ssl_trusted_ca_cert_data**: similar to `ssl_trusted_ca_cert_file` but embed the contents of the PEM file as a string value instead of path to a local file (string, optional)
