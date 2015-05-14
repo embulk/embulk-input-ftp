@@ -254,7 +254,7 @@ public class TrustManagers
             return sock;
         }
 
-        private void setSSLParameters(Socket sock, boolean setHostname) throws IOException
+        private void setSSLParameters(Socket sock, boolean setHostname)
         {
             if (sock instanceof SSLSocket) {
                 SSLSocket s = (SSLSocket) sock;
