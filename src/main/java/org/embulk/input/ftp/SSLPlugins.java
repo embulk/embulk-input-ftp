@@ -14,9 +14,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateEncodingException;
-import java.security.SecureRandom;
 import java.security.KeyManagementException;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
 import com.google.common.base.Optional;
@@ -120,9 +118,9 @@ public class SSLPlugins
                 case NO_VERIFY:
                     return new X509TrustManager[] { getNoVerifyTrustManager() };
                 case CERTIFICATES:
-                    return TrustManagerBuilder.newTrustManager(certificates);
+                    return TrustManagers.newTrustManager(certificates);
                 default: // JVM_DEFAULT
-                    return TrustManagerBuilder.newDefaultJavaTrustManager();
+                    return TrustManagers.newDefaultJavaTrustManager();
                 }
             } catch (IOException | GeneralSecurityException ex) {
                 throw new RuntimeException(ex);
@@ -184,7 +182,7 @@ public class SSLPlugins
 
         List<X509Certificate> certs;
         try (Reader r = reader) {
-            certs = TrustManagerBuilder.readPemEncodedX509Certificates(r);
+            certs = TrustManagers.readPemEncodedX509Certificates(r);
             if (certs.isEmpty()) {
                 throw new ConfigException(optionName + " does not include valid X.509 PEM certificates");
             }
@@ -195,19 +193,13 @@ public class SSLPlugins
         return Optional.of(certs);
     }
 
-    public static SSLSocketFactory newSSLSocketFactory(SSLPluginConfig config)
+    public static SSLSocketFactory newSSLSocketFactory(SSLPluginConfig config, String verifyHostname)
     {
         try {
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(
+            return TrustManagers.newSSLSocketFactory(
                     null,  // TODO sending client certificate is not implemented yet
                     config.newTrustManager(),
-                    new SecureRandom());
-            return context.getSocketFactory();
-
-        } catch (NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);
-
+                    verifyHostname);
         } catch (KeyManagementException ex) {
             throw new RuntimeException(ex);
         }

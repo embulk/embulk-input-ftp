@@ -157,7 +157,7 @@ public class FtpFileInputPlugin
         FTPClient client = new FTPClient();
         try {
             if (task.getSsl()) {
-                client.setSSLSocketFactory(SSLPlugins.newSSLSocketFactory(task.getSSLConfig()));
+                client.setSSLSocketFactory(SSLPlugins.newSSLSocketFactory(task.getSSLConfig(), task.getHost()));
                 client.setSecurity(FTPClient.SECURITY_FTPS);
             }
 
