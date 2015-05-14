@@ -38,6 +38,10 @@ public class SSLPlugins
         @ConfigDefault("null")
         public Optional<Boolean> getSslNoVerify();
 
+        @Config("ssl_verify_hostname")
+        @ConfigDefault("true")
+        public boolean getSslVerifyHostname();
+
         @Config("ssl_trusted_ca_cert_file")
         @ConfigDefault("null")
         public Optional<String> getSslTrustedCaCertFile();
@@ -56,18 +60,20 @@ public class SSLPlugins
 
     public static class SSLPluginConfig
     {
-        static SSLPluginConfig NO_VERIFY = new SSLPluginConfig(VerifyMode.NO_VERIFY, ImmutableList.<byte[]>of());
-        static SSLPluginConfig JVM_DEFAULT = new SSLPluginConfig(VerifyMode.JVM_DEFAULT, ImmutableList.<byte[]>of());
+        static SSLPluginConfig NO_VERIFY = new SSLPluginConfig(VerifyMode.NO_VERIFY, false, ImmutableList.<byte[]>of());
 
         private final VerifyMode verifyMode;
+        private final boolean verifyHostname;
         private final List<X509Certificate> certificates;
 
         @JsonCreator
         private SSLPluginConfig(
             @JsonProperty("verifyMode") VerifyMode verifyMode,
+            @JsonProperty("verifyHostname") boolean verifyHostname,
             @JsonProperty("certificates") List<byte[]> certificates)
         {
             this.verifyMode = verifyMode;
+            this.verifyHostname = verifyHostname;
             this.certificates = ImmutableList.copyOf(
                     Lists.transform(certificates, new Function<byte[], X509Certificate>() {
                         public X509Certificate apply(byte[] data)
@@ -83,16 +89,28 @@ public class SSLPlugins
                 );
         }
 
-        SSLPluginConfig(List<X509Certificate> certificates)
+        SSLPluginConfig(List<X509Certificate> certificates, boolean verifyHostname)
         {
             this.verifyMode = VerifyMode.CERTIFICATES;
+            this.verifyHostname = verifyHostname;
             this.certificates = certificates;
+        }
+
+        static SSLPluginConfig useJvmDefault(boolean verifyHostname)
+        {
+            return new SSLPluginConfig(VerifyMode.JVM_DEFAULT, verifyHostname, ImmutableList.<byte[]>of());
         }
 
         @JsonProperty("verifyMode")
         private VerifyMode getVerifyMode()
         {
             return verifyMode;
+        }
+
+        @JsonProperty("verifyHostname")
+        private boolean getVerifyHostname()
+        {
+            return verifyHostname;
         }
 
         @JsonProperty("certificates")
@@ -143,17 +161,17 @@ public class SSLPlugins
     {
         Optional<List<X509Certificate>> certs = readTrustedCertificates(task);
         if (certs.isPresent()) {
-            return new SSLPluginConfig(certs.get());
+            return new SSLPluginConfig(certs.get(), task.getSslVerifyHostname());
         } else if (task.getSslNoVerify().isPresent()) {
             if (task.getSslNoVerify().get()) {
                 return SSLPluginConfig.NO_VERIFY;
             } else {
-                return SSLPluginConfig.JVM_DEFAULT;
+                return SSLPluginConfig.useJvmDefault(task.getSslVerifyHostname());
             }
         } else {
             switch (defaultVerifyMode) {
             case VERIFY_BY_JVM_TRUSTED_CA_CERTS:
-                return SSLPluginConfig.JVM_DEFAULT;
+                return SSLPluginConfig.useJvmDefault(task.getSslVerifyHostname());
             case NO_VERIFY:
                 return SSLPluginConfig.NO_VERIFY;
             default:
@@ -193,13 +211,13 @@ public class SSLPlugins
         return Optional.of(certs);
     }
 
-    public static SSLSocketFactory newSSLSocketFactory(SSLPluginConfig config, String verifyHostname)
+    public static SSLSocketFactory newSSLSocketFactory(SSLPluginConfig config, String hostname)
     {
         try {
             return TrustManagers.newSSLSocketFactory(
                     null,  // TODO sending client certificate is not implemented yet
                     config.newTrustManager(),
-                    verifyHostname);
+                    config.getVerifyHostname() ? hostname : null);
         } catch (KeyManagementException ex) {
             throw new RuntimeException(ex);
         }
