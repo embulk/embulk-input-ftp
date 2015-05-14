@@ -23,6 +23,8 @@
 
 ## Example
 
+Simple FTP:
+
 ```yaml
 in:
   type: ftp
@@ -33,7 +35,7 @@ in:
   path_prefix: /ftp/file/path/prefix
 ```
 
-With SSL:
+FTPS encryption without server certificate verification:
 
 ```yaml
 in:
@@ -45,19 +47,35 @@ in:
   path_prefix: /ftp/file/path/prefix
 
   ssl: true
+  ssl_verify: false
+```
 
-  #ssl_no_verify: true    # to disable server certificate verification
+FTPS encryption with server certificate verification:
 
-  # if you use self-signed certificate, embed the PEM data
+```yaml
+in:
+  type: ftp
+  host: ftp.example.net
+  port: 21
+  user: anonymous
+  password: "mypassword"
+  path_prefix: /ftp/file/path/prefix
+
+  ssl: true
+  ssl_verify: true
+
+  ssl_verify_hostname: false   # to disable server hostname verification (optional)
+
+  # if the server use self-signed certificate, or set path to the pem file (optional)
+  ssl_trusted_ca_cert_file: /path/to/ca_cert.pem
+
+  # or embed contents of the pem file here (optional)
   ssl_trusted_ca_cert_data: |
       -----BEGIN CERTIFICATE-----
       MIIFV...
       ...
       ...
       -----END CERTIFICATE-----
-
-  # or set path to the pem file
-  ssl_trusted_ca_cert_file: /path/to/ca_cert.pem
 ```
 
 ## Build
