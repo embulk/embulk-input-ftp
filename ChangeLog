@@ -1,8 +1,14 @@
 
+Release 0.1.2 - 2015-06-10
+
+* Added support for SSL certificate verification
+
+
 Release 0.1.1 - 2015-04-29
 
 * Added support for SSL
 * Fixed last_path handling
+
 
 Release 0.1.0 - 2015-04-29
 
