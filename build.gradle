@@ -18,6 +18,7 @@ dependencies {
     compile  "org.embulk:embulk-core:0.6.8"
     provided "org.embulk:embulk-core:0.6.8"
     compile files("libs/ftp4j-1.7.2.jar")
+    compile "org.bouncycastle:bcpkix-jdk15on:1.52"
     testCompile "junit:junit:4.+"
 }
 
