@@ -31,7 +31,6 @@ in:
   host: ftp.example.net
   port: 21
   user: anonymous
-  password: "mypassword"
   path_prefix: /ftp/file/path/prefix
 ```
 
