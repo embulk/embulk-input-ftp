@@ -25,7 +25,7 @@ import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import it.sauronsoftware.ftp4j.FTPDataTransferException;
 import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPListParseException;
-import org.embulk.config.CommitReport;
+import org.embulk.config.TaskReport;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigDefault;
@@ -147,7 +147,7 @@ public class FtpFileInputPlugin
     @Override
     public void cleanup(TaskSource taskSource,
             int taskCount,
-            List<CommitReport> successCommitReports)
+            List<TaskReport> successTaskReports)
     {
         // do nothing
     }
@@ -596,9 +596,9 @@ public class FtpFileInputPlugin
 
         public void abort() { }
 
-        public CommitReport commit()
+        public TaskReport commit()
         {
-            return Exec.newCommitReport();
+            return Exec.newTaskReport();
         }
     }
 }
