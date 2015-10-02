@@ -181,6 +181,8 @@ public class FtpFileInputPlugin
             log.info("Connecting to "+task.getHost());
             if (task.getPort().isPresent()) {
                 client.connect(task.getHost(), task.getPort().get());
+            } else {
+                client.connect(task.getHost());
             }
 
             if (task.getUser().isPresent()) {
