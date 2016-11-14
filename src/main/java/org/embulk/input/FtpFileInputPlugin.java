@@ -51,9 +51,9 @@ public class FtpFileInputPlugin
         implements FileInputPlugin
 {
     private final Logger log = Exec.getLogger(FtpFileInputPlugin.class);
-    private static final Integer FTP_DEFULAT_PORT = 21;
-    private static final Integer FTPS_DEFAULT_PORT = 990;
-    private static final Integer FTPES_DEFAULT_PORT = 21;
+    private static final int FTP_DEFULAT_PORT = 21;
+    private static final int FTPS_DEFAULT_PORT = 990;
+    private static final int FTPES_DEFAULT_PORT = 21;
 
     public interface PluginTask
             extends Task, SSLPlugins.SSLPluginTask
@@ -164,7 +164,7 @@ public class FtpFileInputPlugin
     {
         FTPClient client = new FTPClient();
         try {
-            Integer defaultPort = FTP_DEFULAT_PORT;
+            int defaultPort = FTP_DEFULAT_PORT;
             if (task.getSsl()) {
                 client.setSSLSocketFactory(SSLPlugins.newSSLSocketFactory(task.getSSLConfig(), task.getHost()));
                 if (task.getSslExplicit()) {
