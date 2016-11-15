@@ -71,7 +71,6 @@ public class FtpFileInputPlugin
         @Config("port")
         @ConfigDefault("null")
         public Optional<Integer> getPort();
-        public void setPort(Optional<Integer> port);
 
         @Config("user")
         @ConfigDefault("null")
@@ -178,9 +177,7 @@ public class FtpFileInputPlugin
                     log.info("Using FTPS(FTPS/implicit) mode");
                 }
             }
-            if (!task.getPort().isPresent()) {
-                task.setPort(Optional.of(defaultPort));
-            }
+            int port = task.getPort().isPresent()? task.getPort().get() : defaultPort;
 
             client.addCommunicationListener(new LoggingCommunicationListner(log));
 
@@ -199,13 +196,8 @@ public class FtpFileInputPlugin
             //client.setDataTimeout
             //client.setAutodetectUTF8
 
-            if (task.getPort().isPresent()) {
-                client.connect(task.getHost(), task.getPort().get());
-                log.info("Connecting to {}:{}",task.getHost(),task.getPort().get());
-            } else {
-                client.connect(task.getHost());
-                log.info("Connecting to {}",task.getHost());
-            }
+            client.connect(task.getHost(), port);
+            log.info("Connecting to {}:{}",task.getHost(),port);
 
             if (task.getUser().isPresent()) {
                 log.info("Logging in with user "+task.getUser().get());
