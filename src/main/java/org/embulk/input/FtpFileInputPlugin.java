@@ -51,6 +51,9 @@ public class FtpFileInputPlugin
         implements FileInputPlugin
 {
     private final Logger log = Exec.getLogger(FtpFileInputPlugin.class);
+    private static final int FTP_DEFULAT_PORT = 21;
+    private static final int FTPS_DEFAULT_PORT = 990;
+    private static final int FTPES_DEFAULT_PORT = 21;
 
     public interface PluginTask
             extends Task, SSLPlugins.SSLPluginTask
@@ -88,6 +91,10 @@ public class FtpFileInputPlugin
         @Config("ssl")
         @ConfigDefault("false")
         public boolean getSsl();
+
+        @Config("ssl_explicit")
+        @ConfigDefault("true")
+        public boolean getSslExplicit();
 
         public List<String> getFiles();
         public void setFiles(List<String> files);
@@ -156,10 +163,21 @@ public class FtpFileInputPlugin
     {
         FTPClient client = new FTPClient();
         try {
+            int defaultPort = FTP_DEFULAT_PORT;
             if (task.getSsl()) {
                 client.setSSLSocketFactory(SSLPlugins.newSSLSocketFactory(task.getSSLConfig(), task.getHost()));
-                client.setSecurity(FTPClient.SECURITY_FTPS);
+                if (task.getSslExplicit()) {
+                    client.setSecurity(FTPClient.SECURITY_FTPES);
+                    defaultPort = FTPES_DEFAULT_PORT;
+                    log.info("Using FTPES(FTPS/explicit) mode");
+                }
+                else {
+                    client.setSecurity(FTPClient.SECURITY_FTPS);
+                    defaultPort = FTPS_DEFAULT_PORT;
+                    log.info("Using FTPS(FTPS/implicit) mode");
+                }
             }
+            int port = task.getPort().isPresent()? task.getPort().get() : defaultPort;
 
             client.addCommunicationListener(new LoggingCommunicationListner(log));
 
@@ -178,12 +196,8 @@ public class FtpFileInputPlugin
             //client.setDataTimeout
             //client.setAutodetectUTF8
 
-            log.info("Connecting to "+task.getHost());
-            if (task.getPort().isPresent()) {
-                client.connect(task.getHost(), task.getPort().get());
-            } else {
-                client.connect(task.getHost());
-            }
+            client.connect(task.getHost(), port);
+            log.info("Connecting to {}:{}",task.getHost(),port);
 
             if (task.getUser().isPresent()) {
                 log.info("Logging in with user "+task.getUser().get());
