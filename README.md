@@ -18,6 +18,7 @@ If you want to use SFTP, please use [embulk-input-sftp](https://github.com/embul
 - **user**: user name to login (string, optional)
 - **password**: password to login (string, default: `""`)
 - **path_prefix** prefix of target files (string, required)
+- **incremental** enables incremental loading(boolean, optional. default: true. If incremental loading is enabled, config diff for the next execution will include last_path parameter so that next execution skips files before the path. Otherwise, last_path will not be included.
 - **passive_mode**: use passive mode (boolean, default: true)
 - **ascii_mode**: use ASCII mode instead of binary mode (boolean, default: false)
 - **ssl**: use FTPS (SSL encryption). (boolean, default: false)
