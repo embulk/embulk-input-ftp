@@ -26,6 +26,13 @@ dependencies {
     testCompile "junit:junit:4.+"
 }
 
+jar {
+    // JAR files, generated with the normal "jar" task, do not contain dependencies.
+    // The JAR files are contained in plugin gem files. They are named with "-nodep"
+    // such as: "embulk-input-example-X.Y.Z-nodep.jar"
+    classifier = "nodep"
+}
+
 task classpath(type: Copy, dependsOn: ["jar"]) {
     doFirst { file("classpath").deleteDir() }
     from (configurations.runtime - configurations.provided + files(jar.archivePath))
