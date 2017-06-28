@@ -26,21 +26,21 @@ dependencies {
     testCompile "junit:junit:4.+"
 }
 
-jar {
-    // JAR files, generated with the normal "jar" task, do not contain dependencies.
+task gemJar(type: Jar) {
+    // JAR files, generated with the "gemJar" task, do not contain dependencies.
     // The JAR files are contained in plugin gem files. They are named with "-nodep"
     // such as: "embulk-input-example-X.Y.Z-nodep.jar"
     classifier = "nodep"
 }
 
-task classpath(type: Copy, dependsOn: ["jar"]) {
+task gemClasspath(type: Copy, dependsOn: ["gemJar"]) {
     doFirst { file("classpath").deleteDir() }
-    from (configurations.runtime - configurations.provided + files(jar.archivePath))
+    from (configurations.runtime - configurations.provided + files(gemJar.archivePath))
     into "classpath"
 }
 clean { delete "classpath" }
 
-task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
+task gem(type: JRubyExec, dependsOn: ["gemspec", "gemClasspath"]) {
     jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
     script "${project.name}.gemspec"
     doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
@@ -51,7 +51,7 @@ task gemPush(type: JRubyExec, dependsOn: ["gem"]) {
     script "pkg/${project.name}-${project.version}.gem"
 }
 
-task "package"(dependsOn: ["gemspec", "classpath"]) << {
+task "package"(dependsOn: ["gemspec", "gemClasspath"]) << {
     println "> Build succeeded."
     println "> You can run embulk with '-L ${file(".").absolutePath}' argument."
 }
