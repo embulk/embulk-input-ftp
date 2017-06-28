@@ -16,6 +16,7 @@ configurations {
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
+group = "org.embulk.input.ftp"
 version = "0.1.5"
 
 dependencies {
@@ -24,6 +25,33 @@ dependencies {
     compile files("libs/ftp4j-1.7.2.jar")
     compile "org.bouncycastle:bcpkix-jdk15on:1.52"
     testCompile "junit:junit:4.+"
+}
+
+// EXPERIMENTAL: Builds a JAR-based plugin file with dependencies embedded.
+task pluginJar(type: Jar) {
+    destinationDir = file("pkg")
+
+    manifest {
+        attributes 'Embulk-Plugin-Spi-Version': "0",
+                   'Embulk-Plugin-Main-Class': "org.embulk.input.FtpFileInputPlugin",
+                   'Implementation-Title': project.name,
+                   'Implementation-Version': version
+    }
+
+    from {
+        // "provided" dependencies are excluded as they are provided at runtime by the Embulk core.
+        def embedded = configurations.runtime - configurations.provided
+
+        // Dependencies are picked up with extracting ".jar" files.
+        embedded.collect { ( it.isFile() && it.name.endsWith(".jar") ) ? zipTree(it) : it }
+    }
+
+    // Signature files of dependencies are excluded as they cause SecurityException.
+    exclude("META-INF/*.DSA")
+    exclude("META-INF/*.RSA")
+    exclude("META-INF/*.SF")
+
+    with jar
 }
 
 task gemJar(type: Jar) {
