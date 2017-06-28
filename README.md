@@ -103,3 +103,14 @@ in:
 ```
 $ ./gradlew gem
 ```
+
+## Test
+
+To run unit tests, we need to configure the following environment variables.
+```
+FTP_TEST_HOST
+FTP_TEST_USER
+FTP_TEST_PASSWORD
+FTP_TEST_SSL_TRUSTED_CA_CERT_FILE
+FTP_TEST_SSL_TRUSTED_CA_CERT_DATA
+```

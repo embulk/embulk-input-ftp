@@ -310,11 +310,7 @@ public class FtpFileInputPlugin
                 }
             }
 
-        } catch (FTPListParseException ex) {
-            log.info("FTP listing files failed");
-            throw Throwables.propagate(ex);
-
-        } catch (FTPAbortedException ex) {
+        } catch (FTPListParseException | FTPAbortedException ex) {
             log.info("FTP listing files failed");
             throw Throwables.propagate(ex);
 
@@ -338,7 +334,7 @@ public class FtpFileInputPlugin
         return builder.build();
     }
 
-    private static void listFilesRecursive(FTPClient client,
+    static void listFilesRecursive(FTPClient client,
             String baseDirectoryPath, FTPFile file, Optional<String> lastPath,
             ImmutableList.Builder<String> builder)
         throws IOException, FTPException, FTPIllegalReplyException, FTPDataTransferException, FTPAbortedException, FTPListParseException
@@ -448,7 +444,7 @@ public class FtpFileInputPlugin
 
     private static final long TRANSFER_NOTICE_BYTES = 100*1024*1024;
 
-    private static InputStream startDownload(final Logger log, final FTPClient client,
+    static InputStream startDownload(final Logger log, final FTPClient client,
             final String path, final long offset, ExecutorService executor)
     {
         BlockingTransfer t = BlockingTransfer.submit(executor,
@@ -495,7 +491,11 @@ public class FtpFileInputPlugin
         return Channels.newInputStream(t.getReaderChannel());
     }
 
-    private static class FtpInputStreamReopener
+    static int RETRY_LIMIT = 3;
+    static int INITIAL_RETRY_WAIT = 500;
+    static int MAX_RETRY_WAIT = 30*1000;
+
+    static class FtpInputStreamReopener
             implements ResumableInputStream.Reopener
     {
         private final Logger log;
@@ -516,9 +516,9 @@ public class FtpFileInputPlugin
         {
             try {
                 return retryExecutor()
-                    .withRetryLimit(3)
-                    .withInitialRetryWait(500)
-                    .withMaxRetryWait(30*1000)
+                    .withRetryLimit(RETRY_LIMIT)
+                    .withInitialRetryWait(INITIAL_RETRY_WAIT)
+                    .withMaxRetryWait(MAX_RETRY_WAIT)
                     .runInterruptible(new Retryable<InputStream>() {
                         @Override
                         public InputStream call() throws InterruptedIOException
