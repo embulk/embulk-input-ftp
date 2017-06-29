@@ -31,6 +31,14 @@ dependencies {
 task pluginJar(type: Jar) {
     destinationDir = file("pkg")
 
+    configurations {
+        pluginJarArtifact
+    }
+
+    artifacts {
+        pluginJarArtifact file: pluginJar.archivePath, builtBy: pluginJar
+    }
+
     manifest {
         attributes 'Embulk-Plugin-Spi-Version': "0",
                    'Embulk-Plugin-Main-Class': "org.embulk.input.FtpFileInputPlugin",
@@ -53,6 +61,7 @@ task pluginJar(type: Jar) {
 
     with jar
 }
+clean { delete "pkg" }
 
 task gemJar(type: Jar) {
     // JAR files, generated with the "gemJar" task, do not contain dependencies.
