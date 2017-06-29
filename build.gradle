@@ -2,6 +2,7 @@ plugins {
     id "com.jfrog.bintray" version "1.1"
     id "com.github.jruby-gradle.base" version "0.1.5"
     id "java"
+    id "maven"
     id "jacoco"
 }
 import com.github.jrubygradle.JRubyExec
@@ -62,6 +63,63 @@ task pluginJar(type: Jar) {
     with jar
 }
 clean { delete "pkg" }
+
+def cleanupPomInPluginJar = {
+    // All dependencies except for "org.embulk:embulk-core" are removed.
+    whenConfigured { pom ->
+        pom.dependencies = pom.dependencies.findAll { dependency ->
+            ( dependency.groupId == "org.embulk" && dependency.artifactId == "embulk-core" )
+        }
+    }
+
+    // The dependency "org.embulk:embulk-core" is "provided" for plugin JARs.
+    whenConfigured { pom ->
+        pom.dependencies.find { dependency ->
+            ( dependency.groupId == "org.embulk" && dependency.artifactId == "embulk-core" )
+        }.scope = "runtime"
+    }
+}
+
+// EXPERIMENTAL: Uploads the JAR-based plugin build in "pluginJar".
+// TODO: Upload actually. It now locates the artifact on the local Maven repository under $buildDir.
+task uploadPluginJar(type: Upload) {
+    doFirst {
+        file("$buildDir/m2/repository").deleteDir()
+    }
+
+    configuration = configurations.pluginJarArtifact
+
+    repositories {
+        mavenDeployer {
+            repository(url: "file:///$buildDir/m2/repository")
+            pom cleanupPomInPluginJar
+        }
+    }
+}
+
+// EXPERIMENTAL: Installs the JAR-based plugin in the local Maven repository.
+//
+// It should be optional per plugin because the pre-defined "install" task is global in build.gradle.
+// Each plugin would choose to use this "install" task or not.
+//
+// JitPack uses the "install" task to build and publish artifacts by JitPack themselves.
+// This "install" task may work for plugins which use JitPack to distribute.
+// https://jitpack.io/docs/BUILDING/#gradle-projects
+install {
+    configuration = configurations.pluginJarArtifact
+
+    repositories {
+        mavenInstaller {
+            // TODO: Compare also by group, version, and classifier.
+            // They cannot be compared as |artifact| is |org.apache.ivy.core.module.descriptor.DefaultArtifact|,
+            // not |org.apache.maven.artifact.DefaultArtifact|, for Gradle's internal reasons.
+            // See org.gradle.api.publication.maven.internal.deployer.AbstractMavenResolver.
+            // https://github.com/gradle/gradle/blob/v3.5.1/subprojects/maven/src/main/java/org/gradle/api/publication/maven/internal/deployer/AbstractMavenResolver.java
+            addFilter("pluginJarFilter") { artifact, file -> artifact.name == project.name }
+            pom("pluginJarFilter", cleanupPomInPluginJar)
+        }
+    }
+}
 
 task gemJar(type: Jar) {
     // JAR files, generated with the "gemJar" task, do not contain dependencies.
