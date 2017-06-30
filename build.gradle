@@ -81,17 +81,32 @@ def cleanupPomInPluginJar = {
 }
 
 // EXPERIMENTAL: Uploads the JAR-based plugin build in "pluginJar".
-// TODO: Upload actually. It now locates the artifact on the local Maven repository under $buildDir.
 task uploadPluginJar(type: Upload) {
-    doFirst {
-        file("$buildDir/m2/repository").deleteDir()
-    }
-
     configuration = configurations.pluginJarArtifact
 
     repositories {
         mavenDeployer {
-            repository(url: "file:///$buildDir/m2/repository")
+            configurations {
+                pluginJarDeployer
+            }
+
+            dependencies {
+                pluginJarDeployer "net.trajano.wagon:wagon-git:2.0.4"
+            }
+
+            configuration = configurations.pluginJarDeployer
+
+            // "gradle assemble" fails at "getProperty" if the properties are not defined.
+            if (hasProperty("io.github.embulk.plugins.embulk.org.username") &&
+                hasProperty("io.github.embulk.plugins.embulk.org.access_token")) {
+                repository(url: "git:https://github.com/embulk/plugins.embulk.org.git?gh-pages#") {
+                    // Set your GitHub username and personal access token in your ~/.gradle/gradle.properties.
+                    // Do not set your GitHub main password!
+                    authentication(userName: getProperty("io.github.embulk.plugins.embulk.org.username"),
+                                   password: getProperty("io.github.embulk.plugins.embulk.org.access_token"))
+                }
+            }
+
             pom cleanupPomInPluginJar
         }
     }
