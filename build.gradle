@@ -76,7 +76,7 @@ def cleanupPomInPluginJar = {
     whenConfigured { pom ->
         pom.dependencies.find { dependency ->
             ( dependency.groupId == "org.embulk" && dependency.artifactId == "embulk-core" )
-        }.scope = "runtime"
+        }.scope = "provided"
     }
 }
 
