@@ -97,14 +97,16 @@ task uploadPluginJar(type: Upload) {
             configuration = configurations.pluginJarDeployer
 
             // "gradle assemble" fails at "getProperty" if the properties are not defined.
-            if (hasProperty("io.github.embulk.plugins.embulk.org.username") &&
-                hasProperty("io.github.embulk.plugins.embulk.org.access_token")) {
+            if (project.hasProperty("io.github.embulk.plugins.embulk.org.username") &&
+                project.hasProperty("io.github.embulk.plugins.embulk.org.access_token")) {
                 repository(url: "git:https://github.com/embulk/plugins.embulk.org.git?gh-pages#") {
                     // Set your GitHub username and personal access token in your ~/.gradle/gradle.properties.
                     // Do not set your GitHub main password!
-                    authentication(userName: getProperty("io.github.embulk.plugins.embulk.org.username"),
-                                   password: getProperty("io.github.embulk.plugins.embulk.org.access_token"))
+                    authentication(userName: project.getProperty("io.github.embulk.plugins.embulk.org.username"),
+                                   password: project.getProperty("io.github.embulk.plugins.embulk.org.access_token"))
                 }
+            } else {
+                throw new GradleException("Properties \"io.github.embulk.plugins.embulk.org...\" must be configured.")
             }
 
             pom cleanupPomInPluginJar
