@@ -1,0 +1,3 @@
+rootProject.name = 'embulk-input-ftp'
+include 'embulk-util-ftp'
+include 'embulk-input-ftp'

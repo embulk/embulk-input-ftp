@@ -1,4 +1,4 @@
-package org.embulk.input.ftp;
+package org.embulk.util.ftp;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.Callable;
