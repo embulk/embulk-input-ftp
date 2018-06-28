@@ -1,4 +1,4 @@
-package org.embulk.input.ftp;
+package org.embulk.util.ftp;
 
 import java.util.List;
 import java.util.ArrayList;

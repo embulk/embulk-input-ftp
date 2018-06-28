@@ -41,10 +41,9 @@ import org.embulk.spi.util.InputStreamFileInput;
 import org.embulk.spi.util.ResumableInputStream;
 import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
-import org.embulk.input.ftp.BlockingTransfer;
-import org.embulk.input.ftp.SSLPlugins;
-import org.embulk.input.ftp.SSLPlugins.SSLPluginTask;
-import org.embulk.input.ftp.SSLPlugins.SSLPluginConfig;
+import org.embulk.util.ftp.BlockingTransfer;
+import org.embulk.util.ftp.SSLPlugins;
+import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 public class FtpFileInputPlugin
