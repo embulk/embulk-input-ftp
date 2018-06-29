@@ -101,5 +101,12 @@ in:
 ## Build
 
 ```
-$ ./gradlew gem
+$ ./gradlew gem  # -t to watch change of files and rebuild continuously
+$ ./gradlew bintrayUpload # release embulk-input-sftp to Bintray maven repo
+```
+
+## Test
+
+```
+$ ./gradlew test  # -t to watch change of files and rebuild continuously
 ```
