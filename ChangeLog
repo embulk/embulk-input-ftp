@@ -1,3 +1,7 @@
+Release 0.1.6 - 2018-06-29
+
+* Extract utility class as embulk-util-ftp
+
 Release 0.1.5 - 2016-11-16
 
 * Added support for Java7
