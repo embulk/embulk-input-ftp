@@ -31,6 +31,9 @@ import java.util.List;
 public class SSLPlugins
 {
     // SSLPlugins is only for SSL clients. SSL server implementation is out ouf scope.
+    private SSLPlugins()
+    {
+    }
 
     public interface SSLPluginTask
     {

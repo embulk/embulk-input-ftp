@@ -40,6 +40,10 @@ import java.util.List;
 
 public class TrustManagers
 {
+    private TrustManagers()
+    {
+    }
+
     public static KeyStore readDefaultJavaKeyStore()
             throws IOException, KeyStoreException, CertificateException
     {
