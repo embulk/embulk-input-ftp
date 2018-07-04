@@ -1,17 +1,18 @@
 package org.embulk.util.ftp;
 
-import java.util.concurrent.Future;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.io.IOException;
+import com.google.common.base.Function;
+
 import java.io.EOFException;
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import com.google.common.base.Function;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class BlockingTransfer
 {
@@ -68,20 +69,26 @@ public class BlockingTransfer
         if (f != null) {
             try {
                 f.get();
-            } catch (CancellationException ex) {
+            }
+            catch (CancellationException ex) {
                 throw new InterruptedIOException();
-            } catch (InterruptedException ex) {
+            }
+            catch (InterruptedException ex) {
                 throw new InterruptedIOException();
-            } catch (ExecutionException ex) {
+            }
+            catch (ExecutionException ex) {
                 // transfer failed
                 Throwable e = ex.getCause();
                 if (e instanceof IOException) {
                     throw (IOException) e;
-                } else if (e instanceof RuntimeException) {
+                }
+                else if (e instanceof RuntimeException) {
                     throw (RuntimeException) e;
-                } else if (e instanceof Error) {
+                }
+                else if (e instanceof Error) {
                     throw (Error) e;
-                } else {
+                }
+                else {
                     throw new IOException(e);
                 }
             }
@@ -97,7 +104,7 @@ public class BlockingTransfer
                 return sz;
             }
 
-            synchronized(readerChannel) {
+            synchronized (readerChannel) {
                 if (!readerChannel.waitForWritable()) {
                     return -1;
                 }
@@ -135,10 +142,12 @@ public class BlockingTransfer
             try {
                 src.limit(src.position() + dstrem);
                 dst.put(src);
-            } finally {
+            }
+            finally {
                 src.limit(lim);
             }
-        } else {
+        }
+        else {
             dst.put(src);
         }
 
@@ -193,7 +202,8 @@ public class BlockingTransfer
 
                 try {
                     wait();
-                } catch (InterruptedException ex) {
+                }
+                catch (InterruptedException ex) {
                     // TODO throws ClosedByInterruptException or InterruptedIOException?
                 }
             }
@@ -203,7 +213,7 @@ public class BlockingTransfer
 
         private boolean waitForReadable() throws IOException
         {
-            while(buffer == null) {
+            while (buffer == null) {
                 if (exception != null) {
                     if (exception instanceof EOFException) {
                         return false;
@@ -213,7 +223,8 @@ public class BlockingTransfer
 
                 try {
                     wait();
-                } catch (InterruptedException ex) {
+                }
+                catch (InterruptedException ex) {
                     // TODO throws ClosedByInterruptException or InterruptedIOException?
                 }
             }
@@ -224,7 +235,7 @@ public class BlockingTransfer
         public synchronized void closePeer() throws IOException
         {
             waitForWritable();
-            if( exception != null && !(exception instanceof EOFException)) {
+            if (exception != null && !(exception instanceof EOFException)) {
                 throwException();
             }
             setException(new EOFException("writer closed channel"));
@@ -254,14 +265,16 @@ public class BlockingTransfer
             Throwable ex = exception;
             if (ex instanceof IOException) {
                 throw (IOException) ex;
-            } else if (ex instanceof RuntimeException) {
+            }
+            else if (ex instanceof RuntimeException) {
                 throw (RuntimeException) ex;
-            } else if (ex instanceof Error) {
+            }
+            else if (ex instanceof Error) {
                 throw (Error) ex;
-            } else {
+            }
+            else {
                 throw new IOException(ex);
             }
         }
     }
 }
-

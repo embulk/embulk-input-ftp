@@ -1,32 +1,32 @@
 package org.embulk.util.ftp;
 
-import java.util.List;
-import java.io.Reader;
-import java.io.FileReader;
-import java.io.StringReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.FileNotFoundException;
-import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
-import java.security.GeneralSecurityException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateEncodingException;
-import java.security.KeyManagementException;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.X509TrustManager;
-import com.google.common.base.Optional;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
+
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.X509TrustManager;
+
+import java.io.ByteArrayInputStream;
+import java.io.FileReader;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.List;
 
 public class SSLPlugins
 {
@@ -121,7 +121,8 @@ public class SSLPlugins
                 {
                     try {
                         return cert.getEncoded();
-                    } catch (CertificateEncodingException ex) {
+                    }
+                    catch (CertificateEncodingException ex) {
                         throw new RuntimeException(ex);
                     }
                 }
@@ -140,7 +141,8 @@ public class SSLPlugins
                 default: // JVM_DEFAULT
                     return TrustManagers.newDefaultJavaTrustManager();
                 }
-            } catch (IOException | GeneralSecurityException ex) {
+            }
+            catch (IOException | GeneralSecurityException ex) {
                 throw new RuntimeException(ex);
             }
         }
@@ -164,10 +166,12 @@ public class SSLPlugins
             Optional<List<X509Certificate>> certs = readTrustedCertificates(task);
             if (certs.isPresent()) {
                 return new SSLPluginConfig(certs.get(), task.getSslVerifyHostname());
-            } else {
+            }
+            else {
                 return SSLPluginConfig.useJvmDefault(task.getSslVerifyHostname());
             }
-        } else {
+        }
+        else {
             return SSLPluginConfig.NO_VERIFY;
         }
     }
@@ -179,14 +183,17 @@ public class SSLPlugins
         if (task.getSslTrustedCaCertData().isPresent()) {
             optionName = "ssl_trusted_ca_cert_data";
             reader = new StringReader(task.getSslTrustedCaCertData().get());
-        } else if (task.getSslTrustedCaCertFile().isPresent()) {
+        }
+        else if (task.getSslTrustedCaCertFile().isPresent()) {
             optionName = "ssl_trusted_ca_cert_file '" + task.getSslTrustedCaCertFile().get() + "'";
             try {
                 reader = new FileReader(task.getSslTrustedCaCertFile().get());
-            } catch (IOException ex) {
-                throw new ConfigException("Failed to open "+optionName, ex);
             }
-        } else {
+            catch (IOException ex) {
+                throw new ConfigException("Failed to open " + optionName, ex);
+            }
+        }
+        else {
             return Optional.absent();
         }
 
@@ -197,7 +204,7 @@ public class SSLPlugins
                 throw new ConfigException(optionName + " does not include valid X.509 PEM certificates");
             }
         } catch (CertificateException | IOException ex) {
-            throw new ConfigException("Failed to read "+optionName, ex);
+            throw new ConfigException("Failed to read " + optionName, ex);
         }
 
         return Optional.of(certs);
@@ -210,7 +217,8 @@ public class SSLPlugins
                     null,  // TODO sending client certificate is not implemented yet
                     config.newTrustManager(),
                     config.getVerifyHostname() ? hostname : null);
-        } catch (KeyManagementException ex) {
+        }
+        catch (KeyManagementException ex) {
             throw new RuntimeException(ex);
         }
     }

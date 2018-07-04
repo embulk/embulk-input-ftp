@@ -1,41 +1,42 @@
 package org.embulk.util.ftp;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.Reader;
-import java.io.IOException;
-import java.net.Socket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.KeyStoreException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.cert.Certificate;
-import java.security.cert.TrustAnchor;
-import java.security.cert.PKIXParameters;
-import java.security.cert.X509Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateParsingException;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.X509TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.HostnameVerifier;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.openssl.PEMException;
+import org.bouncycastle.openssl.PEMParser;
 import sun.security.ssl.SSLSocketImpl;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import java.io.File;
+import java.io.FileInputStream;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.net.InetAddress;
+import java.net.Socket;
+
+import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.PKIXParameters;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TrustManagers
 {
@@ -49,7 +50,8 @@ public class TrustManagers
                 keyStore.load(in, null);  // password=null because cacerts file is not encrypted
             }
             return keyStore;
-        } catch (NoSuchAlgorithmException ex) {
+        }
+        catch (NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);  // TODO assertion exception?
         }
     }
@@ -60,7 +62,7 @@ public class TrustManagers
         KeyStore keyStore = readDefaultJavaKeyStore();
         PKIXParameters params = new PKIXParameters(keyStore);
         List<X509Certificate> certs = new ArrayList<>();
-        for (TrustAnchor trustAnchor : params.getTrustAnchors() ) {
+        for (TrustAnchor trustAnchor : params.getTrustAnchors()) {
             certs.add(trustAnchor.getTrustedCert());
         }
         return certs;
@@ -91,23 +93,25 @@ public class TrustManagers
                     certs.add(cert);
                 }
             }
-
-        } catch (PEMException ex) {
+        }
+        catch (PEMException ex) {
             // throw when parsing PemObject to Object fails
             throw new CertificateParsingException(ex);
-
-        } catch (IOException ex) {
+        }
+        catch (IOException ex) {
             if (ex.getClass().equals(IOException.class)) {
                 String message = ex.getMessage();
                 if (message.startsWith("unrecognised object: ")) {
                     // thrown at org.bouncycastle.openssl.PemParser.readObject when key type (header of a pem) is
                     // unknown.
                     throw new CertificateParsingException(ex);
-                } else if (message.startsWith("-----END ") && message.endsWith(" not found")) {
+                }
+                else if (message.startsWith("-----END ") && message.endsWith(" not found")) {
                     // thrown at org.bouncycastle.util.io.pem.PemReader.loadObject when a pem file format is invalid
                     throw new CertificateParsingException(ex);
                 }
-            } else {
+            }
+            else {
                 throw ex;
             }
         }
@@ -121,7 +125,8 @@ public class TrustManagers
         KeyStore keyStore = KeyStore.getInstance("JKS");
         try {
             keyStore.load(null);
-        } catch (IOException | CertificateException | NoSuchAlgorithmException ex) {
+        }
+        catch (IOException | CertificateException | NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);
         }
         int i = 0;
@@ -146,7 +151,8 @@ public class TrustManagers
                 }
             }
             return tms.toArray(new X509TrustManager[tms.size()]);
-        } catch (NoSuchAlgorithmException ex) {
+        }
+        catch (NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);  // TODO assertion exception?
         }
     }
@@ -167,8 +173,8 @@ public class TrustManagers
                     trustManager,
                     new SecureRandom());
             return context;
-
-        } catch (NoSuchAlgorithmException ex) {
+        }
+        catch (NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -180,7 +186,8 @@ public class TrustManagers
         SSLSocketFactory factory = context.getSocketFactory();
         if (verifyHostname == null) {
             return factory;
-        } else {
+        }
+        else {
             return new VerifyHostNameSSLSocketFactory(factory, verifyHostname);
         }
     }
