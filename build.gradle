@@ -52,6 +52,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'com.github.jruby-gradle.base'
     apply plugin: 'checkstyle'
+    apply plugin: 'jacoco'
 
     repositories {
         mavenCentral()
@@ -66,11 +67,13 @@ subprojects {
     targetCompatibility = 1.7
 
     dependencies {
-        compile  "org.embulk:embulk-core:0.7.0"
-        provided "org.embulk:embulk-core:0.7.0"
+        compile  "org.embulk:embulk-core:0.8.9"
+        provided "org.embulk:embulk-core:0.8.9"
         compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
         compile "org.bouncycastle:bcpkix-jdk15on:1.52"
         testCompile "junit:junit:4.+"
+        testCompile "org.embulk:embulk-core:0.8.9:tests"
+        testCompile "org.embulk:embulk-standards:0.8.9"
     }
 
     task classpath(type: Copy, dependsOn: ["jar"]) {
