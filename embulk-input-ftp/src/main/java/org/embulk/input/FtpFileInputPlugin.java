@@ -1,37 +1,27 @@
 package org.embulk.input;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.InputStream;
-import java.nio.channels.Channels;
-import org.slf4j.Logger;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPClient;
-import it.sauronsoftware.ftp4j.FTPFile;
-import it.sauronsoftware.ftp4j.FTPConnector;
 import it.sauronsoftware.ftp4j.FTPCommunicationListener;
+import it.sauronsoftware.ftp4j.FTPConnector;
+import it.sauronsoftware.ftp4j.FTPDataTransferException;
 import it.sauronsoftware.ftp4j.FTPDataTransferListener;
 import it.sauronsoftware.ftp4j.FTPException;
+import it.sauronsoftware.ftp4j.FTPFile;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
-import it.sauronsoftware.ftp4j.FTPDataTransferException;
-import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPListParseException;
-import org.embulk.config.TaskReport;
 import org.embulk.config.Config;
-import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
+import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.Task;
+import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.Exec;
@@ -39,11 +29,23 @@ import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
 import org.embulk.spi.util.InputStreamFileInput;
 import org.embulk.spi.util.ResumableInputStream;
-import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
+import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.util.ftp.BlockingTransfer;
 import org.embulk.util.ftp.SSLPlugins;
 import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
+import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.nio.channels.Channels;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 public class FtpFileInputPlugin
@@ -146,7 +148,8 @@ public class FtpFileInputPlugin
                 if (task.getLastPath().isPresent()) {
                     configDiff.set("last_path", task.getLastPath().get());
                 }
-            } else {
+            }
+            else {
                 List<String> files = new ArrayList<String>(task.getFiles());
                 Collections.sort(files);
                 configDiff.set("last_path", files.get(files.size() - 1));
@@ -182,7 +185,7 @@ public class FtpFileInputPlugin
                     log.info("Using FTPS(FTPS/implicit) mode");
                 }
             }
-            int port = task.getPort().isPresent()? task.getPort().get() : defaultPort;
+            int port = task.getPort().isPresent() ? task.getPort().get() : defaultPort;
 
             client.addCommunicationListener(new LoggingCommunicationListner(log));
 
@@ -202,10 +205,10 @@ public class FtpFileInputPlugin
             //client.setAutodetectUTF8
 
             client.connect(task.getHost(), port);
-            log.info("Connecting to {}:{}",task.getHost(),port);
+            log.info("Connecting to {}:{}", task.getHost(), port);
 
             if (task.getUser().isPresent()) {
-                log.info("Logging in with user "+task.getUser().get());
+                log.info("Logging in with user " + task.getUser().get());
                 client.login(task.getUser().get(), task.getPassword().or(""));
             }
 
@@ -215,7 +218,8 @@ public class FtpFileInputPlugin
             if (task.getAsciiMode()) {
                 log.info("Using ASCII mode");
                 client.setType(FTPClient.TYPE_TEXTUAL);
-            } else {
+            }
+            else {
                 log.info("Using binary mode");
                 client.setType(FTPClient.TYPE_BINARY);
             }
@@ -228,20 +232,20 @@ public class FtpFileInputPlugin
             FTPClient connected = client;
             client = null;
             return connected;
-
-        } catch (FTPException ex) {
-            log.info("FTP command failed: "+ex.getCode()+" "+ex.getMessage());
+        }
+        catch (FTPException ex) {
+            log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
             throw Throwables.propagate(ex);
-
-        } catch (FTPIllegalReplyException ex) {
+        }
+        catch (FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
             throw Throwables.propagate(ex);
-
-        } catch (IOException ex) {
-            log.info("FTP network error: "+ex);
+        }
+        catch (IOException ex) {
+            log.info("FTP network error: " + ex);
             throw Throwables.propagate(ex);
-
-        } finally {
+        }
+        finally {
             if (client != null) {
                 disconnectClient(client);
             }
@@ -253,11 +257,14 @@ public class FtpFileInputPlugin
         if (client.isConnected()) {
             try {
                 client.disconnect(false);
-            } catch (FTPException ex) {
+            }
+            catch (FTPException ex) {
                 // do nothing
-            } catch (FTPIllegalReplyException ex) {
+            }
+            catch (FTPIllegalReplyException ex) {
                 // do nothing
-            } catch (IOException ex) {
+            }
+            catch (IOException ex) {
                 // do nothing
             }
         }
@@ -268,7 +275,8 @@ public class FtpFileInputPlugin
         FTPClient client = newFTPClient(log, task);
         try {
             return listFilesByPrefix(log, client, task.getPathPrefix(), task.getLastPath());
-        } finally {
+        }
+        finally {
             disconnectClient(client);
         }
     }
@@ -281,12 +289,14 @@ public class FtpFileInputPlugin
         if (prefix.isEmpty()) {
             directory = "";
             fileNamePrefix = "";
-        } else {
+        }
+        else {
             int pos = prefix.lastIndexOf("/");
             if (pos < 0) {
                 directory = "";
                 fileNamePrefix = prefix;
-            } else {
+            }
+            else {
                 directory = prefix.substring(0, pos + 1);  // include last "/"
                 fileNamePrefix = prefix.substring(pos + 1);
             }
@@ -308,29 +318,29 @@ public class FtpFileInputPlugin
                     listFilesRecursive(client, currentDirectory, file, lastPath, builder);
                 }
             }
-
-        } catch (FTPListParseException ex) {
+        }
+        catch (FTPListParseException ex) {
             log.info("FTP listing files failed");
             throw Throwables.propagate(ex);
-
-        } catch (FTPAbortedException ex) {
+        }
+        catch (FTPAbortedException ex) {
             log.info("FTP listing files failed");
             throw Throwables.propagate(ex);
-
-        } catch (FTPDataTransferException ex) {
+        }
+        catch (FTPDataTransferException ex) {
             log.info("FTP data transfer failed");
             throw Throwables.propagate(ex);
-
-        } catch (FTPException ex) {
-            log.info("FTP command failed: "+ex.getCode()+" "+ex.getMessage());
+        }
+        catch (FTPException ex) {
+            log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
             throw Throwables.propagate(ex);
-
-        } catch (FTPIllegalReplyException ex) {
+        }
+        catch (FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
             throw Throwables.propagate(ex);
-
-        } catch (IOException ex) {
-            log.info("FTP network error: "+ex);
+        }
+        catch (IOException ex) {
+            log.info("FTP network error: " + ex);
             throw Throwables.propagate(ex);
         }
 
@@ -386,7 +396,7 @@ public class FtpFileInputPlugin
 
         public void received(String statement)
         {
-            log.info("< "+statement);
+            log.info("< " + statement);
         }
 
         public void sent(String statement)
@@ -395,7 +405,7 @@ public class FtpFileInputPlugin
                 // don't show password
                 return;
             }
-            log.info("> "+statement);
+            log.info("> " + statement);
         }
     }
 
@@ -424,14 +434,14 @@ public class FtpFileInputPlugin
         {
             totalTransfer += length;
             if (totalTransfer > nextTransferNotice) {
-                log.info("Transferred "+totalTransfer+" bytes");
-                nextTransferNotice = ((totalTransfer / transferNoticeBytes)+1) * transferNoticeBytes;
+                log.info("Transferred " + totalTransfer + " bytes");
+                nextTransferNotice = ((totalTransfer / transferNoticeBytes) + 1) * transferNoticeBytes;
             }
         }
 
         public void completed()
         {
-            log.info("Transfer completed "+totalTransfer+" bytes");
+            log.info("Transfer completed " + totalTransfer + " bytes");
         }
 
         public void aborted()
@@ -445,7 +455,7 @@ public class FtpFileInputPlugin
         }
     }
 
-    private static final long TRANSFER_NOTICE_BYTES = 100*1024*1024;
+    private static final long TRANSFER_NOTICE_BYTES = 100 * 1024 * 1024;
 
     private static InputStream startDownload(final Logger log, final FTPClient client,
             final String path, final long offset, ExecutorService executor)
@@ -460,30 +470,31 @@ public class FtpFileInputPlugin
                             {
                                 try {
                                     client.download(path, Channels.newOutputStream(transfer.getWriterChannel()), offset, new LoggingTransferListener(log, TRANSFER_NOTICE_BYTES));
-
-                                } catch (FTPException ex) {
-                                    log.info("FTP command failed: "+ex.getCode()+" "+ex.getMessage());
+                                }
+                                catch (FTPException ex) {
+                                    log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
                                     throw Throwables.propagate(ex);
-
-                                } catch (FTPDataTransferException ex) {
+                                }
+                                catch (FTPDataTransferException ex) {
                                     log.info("FTP data transfer failed");
                                     throw Throwables.propagate(ex);
-
-                                } catch (FTPAbortedException ex) {
+                                }
+                                catch (FTPAbortedException ex) {
                                     log.info("FTP listing files failed");
                                     throw Throwables.propagate(ex);
-
-                                } catch (FTPIllegalReplyException ex) {
+                                }
+                                catch (FTPIllegalReplyException ex) {
                                     log.info("FTP protocol error");
                                     throw Throwables.propagate(ex);
-
-                                } catch (IOException ex) {
+                                }
+                                catch (IOException ex) {
                                     throw Throwables.propagate(ex);
-
-                                } finally {
+                                }
+                                finally {
                                     try {
                                         transfer.getWriterChannel().close();
-                                    } catch (IOException ex) {
+                                    }
+                                    catch (IOException ex) {
                                         throw new RuntimeException(ex);
                                     }
                                 }
@@ -517,7 +528,7 @@ public class FtpFileInputPlugin
                 return retryExecutor()
                     .withRetryLimit(3)
                     .withInitialRetryWait(500)
-                    .withMaxRetryWait(30*1000)
+                    .withMaxRetryWait(30 * 1000)
                     .runInterruptible(new Retryable<InputStream>() {
                         @Override
                         public InputStream call() throws InterruptedIOException
@@ -537,10 +548,11 @@ public class FtpFileInputPlugin
                                 throws RetryGiveupException
                         {
                             String message = String.format("FTP GET request failed. Retrying %d/%d after %d seconds. Message: %s",
-                                    retryCount, retryLimit, retryWait/1000, exception.getMessage());
+                                    retryCount, retryLimit, retryWait / 1000, exception.getMessage());
                             if (retryCount % 3 == 0) {
                                 log.warn(message, exception);
-                            } else {
+                            }
+                            else {
                                 log.warn(message);
                             }
                         }
@@ -551,10 +563,12 @@ public class FtpFileInputPlugin
                         {
                         }
                     });
-            } catch (RetryGiveupException ex) {
+            }
+            catch (RetryGiveupException ex) {
                 Throwables.propagateIfInstanceOf(ex.getCause(), IOException.class);
                 throw Throwables.propagate(ex.getCause());
-            } catch (InterruptedException ex) {
+            }
+            catch (InterruptedException ex) {
                 throw new InterruptedIOException();
             }
         }
@@ -600,7 +614,8 @@ public class FtpFileInputPlugin
         {
             try {
                 executor.shutdownNow();
-            } finally {
+            }
+            finally {
                 disconnectClient(client);
             }
         }
@@ -615,7 +630,9 @@ public class FtpFileInputPlugin
             super(task.getBufferAllocator(), new SingleFileProvider(log, task, taskIndex));
         }
 
-        public void abort() { }
+        public void abort()
+        {
+        }
 
         public TaskReport commit()
         {
