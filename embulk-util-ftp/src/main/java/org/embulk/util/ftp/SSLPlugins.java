@@ -10,6 +10,7 @@ import com.google.common.collect.Lists;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
+import org.msgpack.core.annotations.VisibleForTesting;
 
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
@@ -179,7 +180,8 @@ public class SSLPlugins
         }
     }
 
-    private static Optional<List<X509Certificate>> readTrustedCertificates(SSLPluginTask task)
+    @VisibleForTesting
+    public static Optional<List<X509Certificate>> readTrustedCertificates(SSLPluginTask task)
     {
         String optionName;
         Reader reader;
