@@ -29,10 +29,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assume.assumeNotNull;
 
 public class TestFtpFileInputPlugin
 {
@@ -58,17 +58,16 @@ public class TestFtpFileInputPlugin
     @BeforeClass
     public static void initializeConstant()
     {
-        FTP_TEST_HOST = System.getenv("FTP_TEST_HOST");
-        FTP_TEST_PORT = System.getenv("FTP_TEST_PORT") != null ? Integer.valueOf(System.getenv("FTP_TEST_PORT")) : 21;
-        FTP_TEST_SSL_PORT = System.getenv("FTP_TEST_SSL_PORT") != null ? Integer.valueOf(System.getenv("FTP_TEST_SSL_PORT")) : 990;
-        FTP_TEST_USER = System.getenv("FTP_TEST_USER");
-        FTP_TEST_PASSWORD = System.getenv("FTP_TEST_PASSWORD");
-        FTP_TEST_SSL_TRUSTED_CA_CERT_FILE = System.getenv("FTP_TEST_SSL_TRUSTED_CA_CERT_FILE");
-        FTP_TEST_SSL_TRUSTED_CA_CERT_DATA = System.getenv("FTP_TEST_SSL_TRUSTED_CA_CERT_DATA");
-        // skip test cases, if environment variables are not set.
-        assumeNotNull(FTP_TEST_HOST, FTP_TEST_USER, FTP_TEST_PASSWORD, FTP_TEST_SSL_TRUSTED_CA_CERT_FILE, FTP_TEST_SSL_TRUSTED_CA_CERT_DATA);
+        final Map<String, String> env = System.getenv();
+        FTP_TEST_HOST = env.getOrDefault("FTP_TEST_HOST", "localhost");
+        FTP_TEST_PORT = Integer.valueOf(env.getOrDefault("FTP_TEST_PORT", "11021"));
+        FTP_TEST_SSL_PORT = Integer.valueOf(env.getOrDefault("FTP_TEST_SSL_PORT", "990"));
+        FTP_TEST_USER = env.getOrDefault("FTP_TEST_USER", "scott");
+        FTP_TEST_PASSWORD = env.getOrDefault("FTP_TEST_PASSWORD", "tiger");
+        FTP_TEST_SSL_TRUSTED_CA_CERT_FILE = env.getOrDefault("FTP_TEST_SSL_TRUSTED_CA_CERT_FILE", "dummy");
+        FTP_TEST_SSL_TRUSTED_CA_CERT_DATA = env.getOrDefault("FTP_TEST_SSL_TRUSTED_CA_CERT_DATA", "dummy");
 
-        FTP_TEST_DIRECTORY = System.getenv("FTP_TEST_DIRECTORY") != null ? getDirectory(System.getenv("FTP_TEST_DIRECTORY")) : getDirectory("/unittest/");
+        FTP_TEST_DIRECTORY = getDirectory(env.getOrDefault("FTP_TEST_DIRECTORY", "/unittest/"));
         FTP_TEST_PATH_PREFIX = FTP_TEST_DIRECTORY + "sample_";
     }
 
