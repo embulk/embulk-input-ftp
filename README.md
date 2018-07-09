@@ -107,25 +107,32 @@ $ ./gradlew bintrayUpload # release embulk-input-sftp to Bintray maven repo
 
 ## Test
 
-```
+Firstly install Docker and Docker compose then `docker-compose up -d`,
+so that an FTP server will be locally launched then you can run tests with `./gradlew test`.
+
+```sh
+$ docker-compose up -d
+Creating network "embulk-input-ftp_default" with the default driver
+Creating embulk-input-ftp_server ... done
+
+$ docker-compose ps
+         Name              Command     State                       Ports                           
+---------------------------------------------------------------------------------------------------
+embulk-input-ftp_server   /start-ftp   Up      0.0.0.0:11021->21/tcp, 0.0.0.0:65000->65000/tcp, ...
+
 $ ./gradlew test  # -t to watch change of files and rebuild continuously
 ```
-To run unit tests, we need to configure the following environment variables.
 
-When environment variables are not set, skip some test cases.
+If you want to use other FTP server to test, configure the following environment variables.
 
 ```
-FTP_TEST_HOST
-FTP_TEST_USER
-FTP_TEST_PASSWORD
+FTP_TEST_HOST (default: localhost)
+FTP_TEST_PORT (default: 11021)
+FTP_TEST_SSL_PORT (default:990)
+FTP_TEST_USER (default: scott)
+FTP_TEST_PASSWORD (default: tigger)
 FTP_TEST_SSL_TRUSTED_CA_CERT_FILE
 FTP_TEST_SSL_TRUSTED_CA_CERT_DATA
-```
-
-Following option is optional
-```
-FTP_TEST_PORT (default:21)
-FTP_TEST_SSL_PORT (default:990)
 ```
 
 If you're using Mac OS X El Capitan and GUI Applications(IDE), like as follows.
