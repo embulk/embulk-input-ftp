@@ -1,7 +1,6 @@
 package org.embulk.input;
 
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -43,6 +42,7 @@ import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -209,7 +209,7 @@ public class FtpFileInputPlugin
 
             if (task.getUser().isPresent()) {
                 log.info("Logging in with user " + task.getUser().get());
-                client.login(task.getUser().get(), task.getPassword().or(""));
+                client.login(task.getUser().get(), task.getPassword().orElse(""));
             }
 
             log.info("Using passive mode");

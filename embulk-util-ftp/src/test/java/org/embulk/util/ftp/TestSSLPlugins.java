@@ -1,6 +1,5 @@
 package org.embulk.util.ftp;
 
-import com.google.common.base.Optional;
 import com.google.common.io.Resources;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
@@ -16,6 +15,7 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -100,8 +100,8 @@ public class TestSSLPlugins
     private class PluginTask implements SSLPlugins.SSLPluginTask
     {
         private Optional<Boolean> sslVerify = Optional.of(false);
-        private Optional<String> caCertData = Optional.absent();
-        private Optional<String> caCertFile = Optional.absent();
+        private Optional<String> caCertData = Optional.empty();
+        private Optional<String> caCertFile = Optional.empty();
         @Override
         public boolean getSslVerifyHostname()
         {
