@@ -60,55 +60,55 @@ public class FtpFileInputPlugin
             extends Task, SSLPlugins.SSLPluginTask
     {
         @Config("path_prefix")
-        public String getPathPrefix();
+        String getPathPrefix();
 
         @Config("last_path")
         @ConfigDefault("null")
-        public Optional<String> getLastPath();
+        Optional<String> getLastPath();
 
         @Config("incremental")
         @ConfigDefault("true")
-        public boolean getIncremental();
+        boolean getIncremental();
 
         @Config("host")
-        public String getHost();
+        String getHost();
 
         @Config("port")
         @ConfigDefault("null")
-        public Optional<Integer> getPort();
+        Optional<Integer> getPort();
 
         @Config("user")
         @ConfigDefault("null")
-        public Optional<String> getUser();
+        Optional<String> getUser();
 
         @Config("password")
         @ConfigDefault("null")
-        public Optional<String> getPassword();
+        Optional<String> getPassword();
 
         @Config("passive_mode")
         @ConfigDefault("true")
-        public boolean getPassiveMode();
+        boolean getPassiveMode();
 
         @Config("ascii_mode")
         @ConfigDefault("false")
-        public boolean getAsciiMode();
+        boolean getAsciiMode();
 
         @Config("ssl")
         @ConfigDefault("false")
-        public boolean getSsl();
+        boolean getSsl();
 
         @Config("ssl_explicit")
         @ConfigDefault("true")
-        public boolean getSslExplicit();
+        boolean getSslExplicit();
 
-        public List<String> getFiles();
-        public void setFiles(List<String> files);
+        List<String> getFiles();
+        void setFiles(List<String> files);
 
-        public SSLPluginConfig getSSLConfig();
-        public void setSSLConfig(SSLPluginConfig config);
+        SSLPluginConfig getSSLConfig();
+        void setSSLConfig(SSLPluginConfig config);
 
         @ConfigInject
-        public BufferAllocator getBufferAllocator();
+        BufferAllocator getBufferAllocator();
     }
 
     @Override

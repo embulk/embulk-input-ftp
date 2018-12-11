@@ -40,19 +40,19 @@ public class SSLPlugins
     {
         @Config("ssl_verify")
         @ConfigDefault("null")
-        public Optional<Boolean> getSslVerify();
+        Optional<Boolean> getSslVerify();
 
         @Config("ssl_verify_hostname")
         @ConfigDefault("true")
-        public boolean getSslVerifyHostname();
+        boolean getSslVerifyHostname();
 
         @Config("ssl_trusted_ca_cert_file")
         @ConfigDefault("null")
-        public Optional<String> getSslTrustedCaCertFile();
+        Optional<String> getSslTrustedCaCertFile();
 
         @Config("ssl_trusted_ca_cert_data")
         @ConfigDefault("null")
-        public Optional<String> getSslTrustedCaCertData();
+        Optional<String> getSslTrustedCaCertData();
     }
 
     private static enum VerifyMode
