@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.embulk.config.Config;
@@ -28,6 +27,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Optional;
 
 public class SSLPlugins
 {
@@ -165,7 +165,7 @@ public class SSLPlugins
 
     public static SSLPluginConfig configure(SSLPluginTask task, DefaultVerifyMode defaultVerifyMode)
     {
-        boolean verify = task.getSslVerify().or(defaultVerifyMode != DefaultVerifyMode.NO_VERIFY);
+        boolean verify = task.getSslVerify().orElse(defaultVerifyMode != DefaultVerifyMode.NO_VERIFY);
         if (verify) {
             Optional<List<X509Certificate>> certs = readTrustedCertificates(task);
             if (certs.isPresent()) {
@@ -199,7 +199,7 @@ public class SSLPlugins
             }
         }
         else {
-            return Optional.absent();
+            return Optional.empty();
         }
 
         List<X509Certificate> certs;

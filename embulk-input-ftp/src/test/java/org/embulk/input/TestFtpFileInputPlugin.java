@@ -182,7 +182,7 @@ public class TestFtpFileInputPlugin
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testGcsFileInputByOpen() throws Exception
+    public void testFtpFileInputByOpen() throws Exception
     {
         ConfigSource config = config();
         PluginTask task = config().loadConfig(PluginTask.class);
