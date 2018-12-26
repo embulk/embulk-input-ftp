@@ -27,6 +27,7 @@ import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
 import org.embulk.spi.util.InputStreamFileInput;
+import org.embulk.spi.util.InputStreamFileInput.InputStreamWithHints;
 import org.embulk.spi.util.ResumableInputStream;
 import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
 import org.embulk.spi.util.RetryExecutor.Retryable;
@@ -597,16 +598,18 @@ public class FtpFileInputPlugin
         }
 
         @Override
-        public InputStream openNext() throws IOException
+        public InputStreamWithHints openNextWithHints() throws IOException
         {
             if (opened) {
                 return null;
             }
             opened = true;
 
-            return new ResumableInputStream(
-                    startDownload(log, client, path, 0L, executor),
-                    new FtpInputStreamReopener(log, client, executor, path));
+            return new InputStreamWithHints(
+                    new ResumableInputStream(
+                            startDownload(log, client, path, 0L, executor),
+                            new FtpInputStreamReopener(log, client, executor, path)), path
+            );
         }
 
         @Override
