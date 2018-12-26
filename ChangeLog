@@ -1,3 +1,6 @@
+Release 0.2.0 - 2018-12-26
+* Use file name output feature in Embulk core to show file name in cmdout [#20](https://github.com/embulk/embulk-input-ftp/pull/20)
+
 Release 0.1.6 - 2018-06-29
 
 * Extract utility class as embulk-util-ftp

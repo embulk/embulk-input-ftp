@@ -6,6 +6,7 @@ This plugin support **FTP**, **FTPES(FTPS explicit)**, **FTPS(FTPS implicit)** a
 
 If you want to use SFTP, please use [embulk-input-sftp](https://github.com/embulk/embulk-input-sftp).
 
+embulk-input-ftp v0.2.0+ requires Embulk v0.9.12+
 
 * **Plugin type**: file input
 * **Resume supported**: yes
