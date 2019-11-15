@@ -174,6 +174,68 @@ public class TestFtpFileInputPlugin
 
     @Test
     @SuppressWarnings("unchecked")
+    public void testListFileWithEmptyPattern() throws Exception
+    {
+        final List<String> expected = Arrays.asList(
+            FTP_TEST_PATH_PREFIX + "01.csv",
+            FTP_TEST_PATH_PREFIX + "02.csv"
+        );
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", "");
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 2);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
+
+        assertEquals(fileList.get(0), expected.get(0));
+        assertEquals(fileList.get(1), expected.get(1));
+        assertEquals(configDiff.get(String.class, "last_path"), FTP_TEST_PATH_PREFIX + "02.csv");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListFileWithSpacesPattern() throws Exception
+    {
+        final List<String> expected = Arrays.asList(
+            FTP_TEST_PATH_PREFIX + "01.csv",
+            FTP_TEST_PATH_PREFIX + "02.csv"
+        );
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", "    ");
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 2);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
+
+        assertEquals(fileList.get(0), expected.get(0));
+        assertEquals(fileList.get(1), expected.get(1));
+        assertEquals(configDiff.get(String.class, "last_path"), FTP_TEST_PATH_PREFIX + "02.csv");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     public void testListFilesWithPathMatcher() throws Exception
     {
         final String pattern = FTP_TEST_PATH_PREFIX + "02";
