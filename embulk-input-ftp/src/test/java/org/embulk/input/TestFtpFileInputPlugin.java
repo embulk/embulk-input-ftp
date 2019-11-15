@@ -232,6 +232,34 @@ public class TestFtpFileInputPlugin
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    public void testListFilesWithNotExactPathMatcher() throws Exception
+    {
+        final String pattern = "\\b" + FTP_TEST_PATH_PREFIX + "\\b";
+        final Pattern pathMatchPattern = Pattern.compile(pattern);
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", pattern);
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 0);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
+
+        assertEquals(fileList.size(), 0);
+        assertEquals(configDiff.get(String.class, "last_path"), "");
+    }
+
+    @Test
     public void testListFilesByPrefixIncrementalFalse()
     {
         final ConfigSource config = config()
