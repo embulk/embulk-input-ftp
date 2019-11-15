@@ -1,3 +1,6 @@
+Release 0.2.1 - 2019-11-19
+* Add `path_match_pattern` to filter files by regular expression [#23](https://github.com/embulk/embulk-input-ftp/pull/23)
+
 Release 0.2.0 - 2018-12-26
 * Use file name output feature in Embulk core to show file name in cmdout [#20](https://github.com/embulk/embulk-input-ftp/pull/20)
 
