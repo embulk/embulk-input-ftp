@@ -14,6 +14,8 @@ import it.sauronsoftware.ftp4j.FTPException;
 import it.sauronsoftware.ftp4j.FTPFile;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import it.sauronsoftware.ftp4j.FTPListParseException;
+
+import org.apache.commons.lang3.StringUtils;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
@@ -46,6 +48,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
@@ -66,6 +69,10 @@ public class FtpFileInputPlugin
         @Config("last_path")
         @ConfigDefault("null")
         Optional<String> getLastPath();
+
+        @Config("path_match_pattern")
+        @ConfigDefault("\".*\"")
+        String getPathMatchPattern();
 
         @Config("incremental")
         @ConfigDefault("true")
@@ -113,14 +120,22 @@ public class FtpFileInputPlugin
     }
 
     @Override
-    public ConfigDiff transaction(ConfigSource config, FileInputPlugin.Control control)
+    public ConfigDiff transaction(final ConfigSource config, final FileInputPlugin.Control control)
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
+        final PluginTask task = config.loadConfig(PluginTask.class);
 
         task.setSSLConfig(SSLPlugins.configure(task));
 
+        String pattern = task.getPathMatchPattern();
+        // If pattern is empty then use default pattern
+        if (StringUtils.trim(pattern).isEmpty()) {
+            pattern = ".*";
+        }
+        // Create path match pattern
+        final Pattern pathMatchPattern = Pattern.compile(pattern);
+
         // list files recursively
-        List<String> files = listFiles(log, task);
+        final List<String> files = listFiles(log, task, pathMatchPattern);
         task.setFiles(files);
         log.info("Using files {}", files);
 
@@ -131,16 +146,16 @@ public class FtpFileInputPlugin
     }
 
     @Override
-    public ConfigDiff resume(TaskSource taskSource,
-            int taskCount,
-            FileInputPlugin.Control control)
+    public ConfigDiff resume(final TaskSource taskSource,
+            final int taskCount,
+            final FileInputPlugin.Control control)
     {
-        PluginTask task = taskSource.loadTask(PluginTask.class);
+        final PluginTask task = taskSource.loadTask(PluginTask.class);
 
         control.run(taskSource, taskCount);
 
         // build next config
-        ConfigDiff configDiff = Exec.newConfigDiff();
+        final ConfigDiff configDiff = Exec.newConfigDiff();
 
         // last_path
         if (task.getIncremental()) {
@@ -151,7 +166,7 @@ public class FtpFileInputPlugin
                 }
             }
             else {
-                List<String> files = new ArrayList<String>(task.getFiles());
+                final List<String> files = new ArrayList<String>(task.getFiles());
                 Collections.sort(files);
                 configDiff.set("last_path", files.get(files.size() - 1));
             }
@@ -161,14 +176,14 @@ public class FtpFileInputPlugin
     }
 
     @Override
-    public void cleanup(TaskSource taskSource,
-            int taskCount,
-            List<TaskReport> successTaskReports)
+    public void cleanup(final TaskSource taskSource,
+            final int taskCount,
+            final List<TaskReport> successTaskReports)
     {
         // do nothing
     }
 
-    private static FTPClient newFTPClient(Logger log, PluginTask task)
+    private static FTPClient newFTPClient(final Logger log, final PluginTask task)
     {
         FTPClient client = new FTPClient();
         try {
@@ -186,14 +201,14 @@ public class FtpFileInputPlugin
                     log.info("Using FTPS(FTPS/implicit) mode");
                 }
             }
-            int port = task.getPort().isPresent() ? task.getPort().get() : defaultPort;
+            final int port = task.getPort().isPresent() ? task.getPort().get() : defaultPort;
 
             client.addCommunicationListener(new LoggingCommunicationListner(log));
 
             // TODO configurable timeout parameters
             client.setAutoNoopTimeout(3000);
 
-            FTPConnector con = client.getConnector();
+            final FTPConnector con = client.getConnector();
             con.setConnectionTimeout(30);
             con.setReadTimeout(60);
             con.setCloseTimeout(60);
@@ -230,19 +245,19 @@ public class FtpFileInputPlugin
                 client.setCompressionEnabled(true);
             }
 
-            FTPClient connected = client;
+            final FTPClient connected = client;
             client = null;
             return connected;
         }
-        catch (FTPException ex) {
+        catch (final FTPException ex) {
             log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
             throw Throwables.propagate(ex);
         }
-        catch (FTPIllegalReplyException ex) {
+        catch (final FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
             throw Throwables.propagate(ex);
         }
-        catch (IOException ex) {
+        catch (final IOException ex) {
             log.info("FTP network error: " + ex);
             throw Throwables.propagate(ex);
         }
@@ -253,37 +268,37 @@ public class FtpFileInputPlugin
         }
     }
 
-    static void disconnectClient(FTPClient client)
+    static void disconnectClient(final FTPClient client)
     {
         if (client.isConnected()) {
             try {
                 client.disconnect(false);
             }
-            catch (FTPException ex) {
+            catch (final FTPException ex) {
                 // do nothing
             }
-            catch (FTPIllegalReplyException ex) {
+            catch (final FTPIllegalReplyException ex) {
                 // do nothing
             }
-            catch (IOException ex) {
+            catch (final IOException ex) {
                 // do nothing
             }
         }
     }
 
-    private List<String> listFiles(Logger log, PluginTask task)
+    private List<String> listFiles(final Logger log, final PluginTask task, final Pattern pathMatchPattern)
     {
-        FTPClient client = newFTPClient(log, task);
+        final FTPClient client = newFTPClient(log, task);
         try {
-            return listFilesByPrefix(log, client, task.getPathPrefix(), task.getLastPath());
+            return listFilesByPrefix(log, client, task.getPathPrefix(), task.getLastPath(), pathMatchPattern);
         }
         finally {
             disconnectClient(client);
         }
     }
 
-    public static List<String> listFilesByPrefix(Logger log, FTPClient client,
-            String prefix, Optional<String> lastPath)
+    public static List<String> listFilesByPrefix(final Logger log, final FTPClient client,
+            final String prefix, final Optional<String> lastPath, final Pattern pathMatchPattern)
     {
         String directory;
         String fileNamePrefix;
@@ -292,7 +307,7 @@ public class FtpFileInputPlugin
             fileNamePrefix = "";
         }
         else {
-            int pos = prefix.lastIndexOf("/");
+            final int pos = prefix.lastIndexOf("/");
             if (pos < 0) {
                 directory = "";
                 fileNamePrefix = prefix;
@@ -303,7 +318,7 @@ public class FtpFileInputPlugin
             }
         }
 
-        ImmutableList.Builder<String> builder = ImmutableList.builder();
+        final ImmutableList.Builder<String> builder = ImmutableList.builder();
 
         try {
             String currentDirectory = client.currentDirectory();
@@ -314,33 +329,33 @@ public class FtpFileInputPlugin
                 currentDirectory = directory;
             }
 
-            for (FTPFile file : client.list()) {
+            for (final FTPFile file : client.list()) {
                 if (file.getName().startsWith(fileNamePrefix)) {
-                    listFilesRecursive(client, currentDirectory, file, lastPath, builder);
+                    listFilesRecursive(client, currentDirectory, file, lastPath, builder, pathMatchPattern);
                 }
             }
         }
-        catch (FTPListParseException ex) {
+        catch (final FTPListParseException ex) {
             log.info("FTP listing files failed");
             throw Throwables.propagate(ex);
         }
-        catch (FTPAbortedException ex) {
+        catch (final FTPAbortedException ex) {
             log.info("FTP listing files failed");
             throw Throwables.propagate(ex);
         }
-        catch (FTPDataTransferException ex) {
+        catch (final FTPDataTransferException ex) {
             log.info("FTP data transfer failed");
             throw Throwables.propagate(ex);
         }
-        catch (FTPException ex) {
+        catch (final FTPException ex) {
             log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
             throw Throwables.propagate(ex);
         }
-        catch (FTPIllegalReplyException ex) {
+        catch (final FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
             throw Throwables.propagate(ex);
         }
-        catch (IOException ex) {
+        catch (final IOException ex) {
             log.info("FTP network error: " + ex);
             throw Throwables.propagate(ex);
         }
@@ -348,15 +363,15 @@ public class FtpFileInputPlugin
         return builder.build();
     }
 
-    private static void listFilesRecursive(FTPClient client,
-            String baseDirectoryPath, FTPFile file, Optional<String> lastPath,
-            ImmutableList.Builder<String> builder)
+    private static void listFilesRecursive(final FTPClient client,
+            String baseDirectoryPath, final FTPFile file, final Optional<String> lastPath,
+            final ImmutableList.Builder<String> builder, final Pattern pathMatchPattern)
         throws IOException, FTPException, FTPIllegalReplyException, FTPDataTransferException, FTPAbortedException, FTPListParseException
     {
         if (!baseDirectoryPath.endsWith("/")) {
             baseDirectoryPath = baseDirectoryPath + "/";
         }
-        String path = baseDirectoryPath + file.getName();
+        final String path = baseDirectoryPath + file.getName();
 
         if (lastPath.isPresent() && path.compareTo(lastPath.get()) <= 0) {
             return;
@@ -364,12 +379,14 @@ public class FtpFileInputPlugin
 
         switch (file.getType()) {
         case FTPFile.TYPE_FILE:
-            builder.add(path);
+            if (pathMatchPattern.matcher(path).find()) {
+                builder.add(path);
+            }
             break;
         case FTPFile.TYPE_DIRECTORY:
             client.changeDirectory(path);
-            for (FTPFile subFile : client.list()) {
-                listFilesRecursive(client, path, subFile, lastPath, builder);
+            for (final FTPFile subFile : client.list()) {
+                listFilesRecursive(client, path, subFile, lastPath, builder, pathMatchPattern);
             }
             client.changeDirectory(baseDirectoryPath);
             break;
@@ -379,9 +396,9 @@ public class FtpFileInputPlugin
     }
 
     @Override
-    public TransactionalFileInput open(TaskSource taskSource, int taskIndex)
+    public TransactionalFileInput open(final TaskSource taskSource, final int taskIndex)
     {
-        PluginTask task = taskSource.loadTask(PluginTask.class);
+        final PluginTask task = taskSource.loadTask(PluginTask.class);
         return new FtpFileInput(log, task, taskIndex);
     }
 
@@ -390,17 +407,19 @@ public class FtpFileInputPlugin
     {
         private final Logger log;
 
-        public LoggingCommunicationListner(Logger log)
+        public LoggingCommunicationListner(final Logger log)
         {
             this.log = log;
         }
 
-        public void received(String statement)
+        @Override
+        public void received(final String statement)
         {
             log.info("< " + statement);
         }
 
-        public void sent(String statement)
+        @Override
+        public void sent(final String statement)
         {
             if (statement.startsWith("PASS")) {
                 // don't show password
@@ -419,19 +438,21 @@ public class FtpFileInputPlugin
         private long totalTransfer;
         private long nextTransferNotice;
 
-        public LoggingTransferListener(Logger log, long transferNoticeBytes)
+        public LoggingTransferListener(final Logger log, final long transferNoticeBytes)
         {
             this.log = log;
             this.transferNoticeBytes = transferNoticeBytes;
             this.nextTransferNotice = transferNoticeBytes;
         }
 
+        @Override
         public void started()
         {
             log.info("Transfer started");
         }
 
-        public void transferred(int length)
+        @Override
+        public void transferred(final int length)
         {
             totalTransfer += length;
             if (totalTransfer > nextTransferNotice) {
@@ -440,16 +461,19 @@ public class FtpFileInputPlugin
             }
         }
 
+        @Override
         public void completed()
         {
             log.info("Transfer completed " + totalTransfer + " bytes");
         }
 
+        @Override
         public void aborted()
         {
             log.info("Transfer aborted");
         }
 
+        @Override
         public void failed()
         {
             log.info("Transfer failed");
@@ -459,43 +483,45 @@ public class FtpFileInputPlugin
     private static final long TRANSFER_NOTICE_BYTES = 100 * 1024 * 1024;
 
     private static InputStream startDownload(final Logger log, final FTPClient client,
-            final String path, final long offset, ExecutorService executor)
+            final String path, final long offset, final ExecutorService executor)
     {
-        BlockingTransfer t = BlockingTransfer.submit(executor,
+        final BlockingTransfer t = BlockingTransfer.submit(executor,
                 new Function<BlockingTransfer, Runnable>()
                 {
+                    @Override
                     public Runnable apply(final BlockingTransfer transfer)
                     {
                         return new Runnable() {
+                            @Override
                             public void run()
                             {
                                 try {
                                     client.download(path, Channels.newOutputStream(transfer.getWriterChannel()), offset, new LoggingTransferListener(log, TRANSFER_NOTICE_BYTES));
                                 }
-                                catch (FTPException ex) {
+                                catch (final FTPException ex) {
                                     log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
                                     throw Throwables.propagate(ex);
                                 }
-                                catch (FTPDataTransferException ex) {
+                                catch (final FTPDataTransferException ex) {
                                     log.info("FTP data transfer failed");
                                     throw Throwables.propagate(ex);
                                 }
-                                catch (FTPAbortedException ex) {
+                                catch (final FTPAbortedException ex) {
                                     log.info("FTP listing files failed");
                                     throw Throwables.propagate(ex);
                                 }
-                                catch (FTPIllegalReplyException ex) {
+                                catch (final FTPIllegalReplyException ex) {
                                     log.info("FTP protocol error");
                                     throw Throwables.propagate(ex);
                                 }
-                                catch (IOException ex) {
+                                catch (final IOException ex) {
                                     throw Throwables.propagate(ex);
                                 }
                                 finally {
                                     try {
                                         transfer.getWriterChannel().close();
                                     }
-                                    catch (IOException ex) {
+                                    catch (final IOException ex) {
                                         throw new RuntimeException(ex);
                                     }
                                 }
@@ -514,7 +540,7 @@ public class FtpFileInputPlugin
         private final ExecutorService executor;
         private final String path;
 
-        public FtpInputStreamReopener(Logger log, FTPClient client, ExecutorService executor, String path)
+        public FtpInputStreamReopener(final Logger log, final FTPClient client, final ExecutorService executor, final String path)
         {
             this.log = log;
             this.client = client;
@@ -539,16 +565,16 @@ public class FtpFileInputPlugin
                         }
 
                         @Override
-                        public boolean isRetryableException(Exception exception)
+                        public boolean isRetryableException(final Exception exception)
                         {
                             return true;  // TODO
                         }
 
                         @Override
-                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
+                        public void onRetry(final Exception exception, final int retryCount, final int retryLimit, final int retryWait)
                                 throws RetryGiveupException
                         {
-                            String message = String.format("FTP GET request failed. Retrying %d/%d after %d seconds. Message: %s",
+                            final String message = String.format("FTP GET request failed. Retrying %d/%d after %d seconds. Message: %s",
                                     retryCount, retryLimit, retryWait / 1000, exception.getMessage());
                             if (retryCount % 3 == 0) {
                                 log.warn(message, exception);
@@ -559,17 +585,17 @@ public class FtpFileInputPlugin
                         }
 
                         @Override
-                        public void onGiveup(Exception firstException, Exception lastException)
+                        public void onGiveup(final Exception firstException, final Exception lastException)
                                 throws RetryGiveupException
                         {
                         }
                     });
             }
-            catch (RetryGiveupException ex) {
+            catch (final RetryGiveupException ex) {
                 Throwables.propagateIfInstanceOf(ex.getCause(), IOException.class);
                 throw Throwables.propagate(ex.getCause());
             }
-            catch (InterruptedException ex) {
+            catch (final InterruptedException ex) {
                 throw new InterruptedIOException();
             }
         }
@@ -585,7 +611,7 @@ public class FtpFileInputPlugin
         private final String path;
         private boolean opened = false;
 
-        public SingleFileProvider(Logger log, PluginTask task, int taskIndex)
+        public SingleFileProvider(final Logger log, final PluginTask task, final int taskIndex)
         {
             this.log = log;
             this.client = newFTPClient(log, task);
@@ -628,15 +654,17 @@ public class FtpFileInputPlugin
             extends InputStreamFileInput
             implements TransactionalFileInput
     {
-        public FtpFileInput(Logger log, PluginTask task, int taskIndex)
+        public FtpFileInput(final Logger log, final PluginTask task, final int taskIndex)
         {
             super(task.getBufferAllocator(), new SingleFileProvider(log, task, taskIndex));
         }
 
+        @Override
         public void abort()
         {
         }
 
+        @Override
         public TaskReport commit()
         {
             return Exec.newTaskReport();
