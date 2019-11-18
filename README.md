@@ -19,6 +19,7 @@ embulk-input-ftp v0.2.0+ requires Embulk v0.9.12+
 - **user**: user name to login (string, optional)
 - **password**: password to login (string, default: `""`)
 - **path_prefix** prefix of target files (string, required)
+- **path_match_pattern**: regexp to match file paths. If a file path doesn't match with this pattern, the file will be skipped (regexp string, optional)
 - **incremental** enables incremental loading(boolean, optional. default: true. If incremental loading is enabled, config diff for the next execution will include last_path parameter so that next execution skips files before the path. Otherwise, last_path will not be included.
 - **passive_mode**: use passive mode (boolean, default: true)
 - **ascii_mode**: use ASCII mode instead of binary mode (boolean, default: false)
@@ -131,7 +132,7 @@ FTP_TEST_HOST (default: localhost)
 FTP_TEST_PORT (default: 11021)
 FTP_TEST_SSL_PORT (default:990)
 FTP_TEST_USER (default: scott)
-FTP_TEST_PASSWORD (default: tigger)
+FTP_TEST_PASSWORD (default: tiger)
 FTP_TEST_SSL_TRUSTED_CA_CERT_FILE
 FTP_TEST_SSL_TRUSTED_CA_CERT_DATA
 ```

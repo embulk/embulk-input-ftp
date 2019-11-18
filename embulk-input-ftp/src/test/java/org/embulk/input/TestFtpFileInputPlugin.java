@@ -19,6 +19,7 @@ import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
 import org.embulk.spi.util.Pages;
 import org.embulk.standards.CsvParserPlugin;
 import org.embulk.util.ftp.SSLPlugins;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -30,9 +31,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 public class TestFtpFileInputPlugin
 {
@@ -45,8 +46,10 @@ public class TestFtpFileInputPlugin
     private static String FTP_TEST_SSL_TRUSTED_CA_CERT_DATA;
     private static String FTP_TEST_DIRECTORY;
     private static String FTP_TEST_PATH_PREFIX;
+
     private FileInputRunner runner;
     private TestPageBuilderReader.MockPageOutput output;
+    private final Pattern defaultPathMatchPattern = Pattern.compile(".*");
 
     /*
      * This test case requires environment variables
@@ -86,7 +89,7 @@ public class TestFtpFileInputPlugin
     @Test(expected = RuntimeException.class) // TODO ConfigException should be thrown
     public void testTransactionWithInvalidHost()
     {
-        ConfigSource config = config().deepCopy()
+        final ConfigSource config = config().deepCopy()
                 .set("host", "non-exists.example.com");
 
         runner.transaction(config, new Control());
@@ -95,24 +98,24 @@ public class TestFtpFileInputPlugin
     @Test
     public void testResume()
     {
-        PluginTask task = config().loadConfig(PluginTask.class);
+        final PluginTask task = config().loadConfig(PluginTask.class);
         task.setSSLConfig(sslConfig(task));
         task.setFiles(Arrays.asList("in/aa/a"));
-        ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
+        final ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
         {
             @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
             {
                 return emptyTaskReports(taskCount);
             }
         });
-        assertThat(configDiff.get(String.class, "last_path"), is("in/aa/a"));
+        assertEquals(configDiff.get(String.class, "last_path"), "in/aa/a");
     }
 
     @Test
     public void testCleanup()
     {
-        PluginTask task = config().loadConfig(PluginTask.class);
+        final PluginTask task = config().loadConfig(PluginTask.class);
         plugin.cleanup(task.dump(), 0, Lists.<TaskReport>newArrayList()); // no errors happens
     }
 
@@ -120,87 +123,237 @@ public class TestFtpFileInputPlugin
     @SuppressWarnings("unchecked")
     public void testListFilesWithNonExistPath() throws Exception
     {
-        ConfigSource config = config().deepCopy()
+        final ConfigSource config = config().deepCopy()
                 .set("path_prefix", "non-exists-path");
-        PluginTask task = config.loadConfig(PluginTask.class);
+        final PluginTask task = config.loadConfig(PluginTask.class);
         plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
             {
-                assertThat(taskCount, is(0));
+                assertEquals(taskCount, 0);
                 return emptyTaskReports(taskCount);
             }
         });
 
-        Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class);
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
-        List<String> fileList = (List<String>) method.invoke(plugin, logger, task);
-        assertThat(fileList.size(), is(0));
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
+        assertEquals(fileList.size(), 0);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     public void testListFiles() throws Exception
     {
-        List<String> expected = Arrays.asList(
+        final List<String> expected = Arrays.asList(
             FTP_TEST_PATH_PREFIX + "01.csv",
             FTP_TEST_PATH_PREFIX + "02.csv"
         );
 
-        ConfigSource config = config();
+        final ConfigSource config = config();
         final PluginTask task = config.loadConfig(PluginTask.class);
-        ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
             {
-                assertThat(taskCount, is(2));
+                assertEquals(taskCount, 2);
                 return emptyTaskReports(taskCount);
             }
         });
 
-        Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class);
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
-        List<String> fileList = (List<String>) method.invoke(plugin, logger, task);
-        assertThat(fileList.get(0), is(expected.get(0)));
-        assertThat(fileList.get(1), is(expected.get(1)));
-        assertThat(configDiff.get(String.class, "last_path"), is(FTP_TEST_PATH_PREFIX + "02.csv"));
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
+
+        assertEquals(fileList.get(0), expected.get(0));
+        assertEquals(fileList.get(1), expected.get(1));
+        assertEquals(configDiff.get(String.class, "last_path"), FTP_TEST_PATH_PREFIX + "02.csv");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListFileWithEmptyPattern() throws Exception
+    {
+        final List<String> expected = Arrays.asList(
+            FTP_TEST_PATH_PREFIX + "01.csv",
+            FTP_TEST_PATH_PREFIX + "02.csv"
+        );
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", "");
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 2);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
+
+        assertEquals(fileList.get(0), expected.get(0));
+        assertEquals(fileList.get(1), expected.get(1));
+        assertEquals(configDiff.get(String.class, "last_path"), FTP_TEST_PATH_PREFIX + "02.csv");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListFileWithSpacesPattern() throws Exception
+    {
+        final List<String> expected = Arrays.asList(
+            FTP_TEST_PATH_PREFIX + "01.csv",
+            FTP_TEST_PATH_PREFIX + "02.csv"
+        );
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", "    ");
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 2);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
+
+        assertEquals(fileList.get(0), expected.get(0));
+        assertEquals(fileList.get(1), expected.get(1));
+        assertEquals(configDiff.get(String.class, "last_path"), FTP_TEST_PATH_PREFIX + "02.csv");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListFilesWithPathMatcher() throws Exception
+    {
+        final String pattern = FTP_TEST_PATH_PREFIX + "02";
+        final Pattern pathMatchPattern = Pattern.compile(pattern);
+        final List<String> expected = Arrays.asList(
+            FTP_TEST_PATH_PREFIX + "02.csv"
+        );
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", pattern);
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 1);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
+
+        assertEquals(fileList.get(0), expected.get(0));
+        assertEquals(configDiff.get(String.class, "last_path"), FTP_TEST_PATH_PREFIX + "02.csv");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListFilesWithNonExistPathMatcher() throws Exception
+    {
+        final String pattern = "non_exist_file_matcher";
+        final Pattern pathMatchPattern = Pattern.compile(pattern);
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", pattern);
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 0);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
+
+        assertEquals(fileList.size(), 0);
+        assertEquals(configDiff.get(String.class, "last_path"), "");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListFilesWithNotExactPathMatcher() throws Exception
+    {
+        final String pattern = "\\b" + FTP_TEST_PATH_PREFIX + "\\b";
+        final Pattern pathMatchPattern = Pattern.compile(pattern);
+
+        final ConfigSource config = config();
+        config.set("path_match_pattern", pattern);
+        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
+            {
+                assertEquals(taskCount, 0);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
+        method.setAccessible(true);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
+
+        assertEquals(fileList.size(), 0);
+        assertEquals(configDiff.get(String.class, "last_path"), "");
     }
 
     @Test
     public void testListFilesByPrefixIncrementalFalse()
     {
-        ConfigSource config = config()
+        final ConfigSource config = config()
                 .deepCopy()
                 .set("incremental", false);
 
-        ConfigDiff configDiff = runner.transaction(config, new Control());
+        final ConfigDiff configDiff = runner.transaction(config, new Control());
 
-        assertThat(configDiff.toString(), is("{}"));
+        Assert.assertEquals(configDiff.toString(), "{}");
     }
 
     @Test
     @SuppressWarnings("unchecked")
     public void testFtpFileInputByOpen() throws Exception
     {
-        ConfigSource config = config();
-        PluginTask task = config().loadConfig(PluginTask.class);
+        final ConfigSource config = config();
+        final PluginTask task = config().loadConfig(PluginTask.class);
 
         runner.transaction(config, new Control());
 
-        Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class);
+        final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
-        List<String> fileList = (List<String>) method.invoke(plugin, logger, task);
+        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
         task.setFiles(fileList);
 
         assertRecords(config, output);
     }
 
-    private static List<TaskReport> emptyTaskReports(int taskCount)
+    private static List<TaskReport> emptyTaskReports(final int taskCount)
     {
-        ImmutableList.Builder<TaskReport> reports = new ImmutableList.Builder<>();
+        final ImmutableList.Builder<TaskReport> reports = new ImmutableList.Builder<>();
         for (int i = 0; i < taskCount; i++) {
             reports.add(Exec.newTaskReport());
         }
@@ -211,9 +364,9 @@ public class TestFtpFileInputPlugin
             implements InputPlugin.Control
     {
         @Override
-        public List<TaskReport> run(TaskSource taskSource, Schema schema, int taskCount)
+        public List<TaskReport> run(final TaskSource taskSource, final Schema schema, final int taskCount)
         {
-            List<TaskReport> reports = new ArrayList<>();
+            final List<TaskReport> reports = new ArrayList<>();
             for (int i = 0; i < taskCount; i++) {
                 reports.add(runner.run(taskSource, schema, i, output));
             }
@@ -239,9 +392,9 @@ public class TestFtpFileInputPlugin
                 .set("parser", parserConfig(schemaConfig()));
     }
 
-    private ImmutableMap<String, Object> parserConfig(ImmutableList<Object> schemaConfig)
+    private ImmutableMap<String, Object> parserConfig(final ImmutableList<Object> schemaConfig)
     {
-        ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder<>();
+        final ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder<>();
         builder.put("type", "csv");
         builder.put("newline", "CRLF");
         builder.put("delimiter", ",");
@@ -257,7 +410,7 @@ public class TestFtpFileInputPlugin
 
     private ImmutableList<Object> schemaConfig()
     {
-        ImmutableList.Builder<Object> builder = new ImmutableList.Builder<>();
+        final ImmutableList.Builder<Object> builder = new ImmutableList.Builder<>();
         builder.add(ImmutableMap.of("name", "id", "type", "long"));
         builder.add(ImmutableMap.of("name", "account", "type", "long"));
         builder.add(ImmutableMap.of("name", "time", "type", "timestamp", "format", "%Y-%m-%d %H:%M:%S"));
@@ -266,37 +419,37 @@ public class TestFtpFileInputPlugin
         return builder.build();
     }
 
-    public SSLPlugins.SSLPluginConfig sslConfig(PluginTask task)
+    public SSLPlugins.SSLPluginConfig sslConfig(final PluginTask task)
     {
         return SSLPlugins.configure(task);
     }
 
-    private void assertRecords(ConfigSource config, MockPageOutput output)
+    private void assertRecords(final ConfigSource config, final MockPageOutput output)
     {
-        List<Object[]> records = getRecords(config, output);
-        assertThat(records.size(), is(8));
+        final List<Object[]> records = getRecords(config, output);
+        assertEquals(records.size(), 8);
         {
-            Object[] record = records.get(0);
-            assertThat((long) record[0], is(1L));
-            assertThat((long) record[1], is(32864L));
-            assertThat(record[2].toString(), is("2015-01-27 19:23:49 UTC"));
-            assertThat(record[3].toString(), is("2015-01-27 00:00:00 UTC"));
-            assertThat(record[4].toString(), is("embulk"));
+            final Object[] record = records.get(0);
+            assertEquals((long) record[0], 1L);
+            assertEquals((long) record[1], 32864L);
+            assertEquals(record[2].toString(), "2015-01-27 19:23:49 UTC");
+            assertEquals(record[3].toString(), "2015-01-27 00:00:00 UTC");
+            assertEquals(record[4].toString(), "embulk");
         }
 
         {
-            Object[] record = records.get(1);
-            assertThat((long) record[0], is(2L));
-            assertThat((long) record[1], is(14824L));
-            assertThat(record[2].toString(), is("2015-01-27 19:01:23 UTC"));
-            assertThat(record[3].toString(), is("2015-01-27 00:00:00 UTC"));
-            assertThat(record[4].toString(), is("embulk jruby"));
+            final Object[] record = records.get(1);
+            assertEquals((long) record[0], 2L);
+            assertEquals((long) record[1], 14824L);
+            assertEquals(record[2].toString(), "2015-01-27 19:01:23 UTC");
+            assertEquals(record[3].toString(), "2015-01-27 00:00:00 UTC");
+            assertEquals(record[4].toString(), "embulk jruby");
         }
     }
 
-    private List<Object[]> getRecords(ConfigSource config, MockPageOutput output)
+    private List<Object[]> getRecords(final ConfigSource config, final MockPageOutput output)
     {
-        Schema schema = config.getNested("parser").loadConfig(CsvParserPlugin.PluginTask.class).getSchemaConfig().toSchema();
+        final Schema schema = config.getNested("parser").loadConfig(CsvParserPlugin.PluginTask.class).getSchemaConfig().toSchema();
         return Pages.toObjects(schema, output.pages);
     }
 
