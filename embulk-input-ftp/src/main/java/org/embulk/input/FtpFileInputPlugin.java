@@ -1,9 +1,5 @@
 package org.embulk.input;
 
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPClient;
 import it.sauronsoftware.ftp4j.FTPCommunicationListener;
@@ -41,13 +37,18 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
@@ -251,15 +252,15 @@ public class FtpFileInputPlugin
         }
         catch (final FTPException ex) {
             log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final IOException ex) {
             log.info("FTP network error: " + ex);
-            throw Throwables.propagate(ex);
+            throw new UncheckedIOException(ex);
         }
         finally {
             if (client != null) {
@@ -318,7 +319,7 @@ public class FtpFileInputPlugin
             }
         }
 
-        final ImmutableList.Builder<String> builder = ImmutableList.builder();
+        final ArrayList<String> builder = new ArrayList<>();
 
         try {
             String currentDirectory = client.currentDirectory();
@@ -337,35 +338,35 @@ public class FtpFileInputPlugin
         }
         catch (final FTPListParseException ex) {
             log.info("FTP listing files failed");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPAbortedException ex) {
             log.info("FTP listing files failed");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPDataTransferException ex) {
             log.info("FTP data transfer failed");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPException ex) {
             log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final IOException ex) {
             log.info("FTP network error: " + ex);
-            throw Throwables.propagate(ex);
+            throw new UncheckedIOException(ex);
         }
 
-        return builder.build();
+        return Collections.unmodifiableList(builder);
     }
 
     private static void listFilesRecursive(final FTPClient client,
             String baseDirectoryPath, final FTPFile file, final Optional<String> lastPath,
-            final ImmutableList.Builder<String> builder, final Pattern pathMatchPattern)
+            final ArrayList<String> builder, final Pattern pathMatchPattern)
         throws IOException, FTPException, FTPIllegalReplyException, FTPDataTransferException, FTPAbortedException, FTPListParseException
     {
         if (!baseDirectoryPath.endsWith("/")) {
@@ -500,29 +501,29 @@ public class FtpFileInputPlugin
                                 }
                                 catch (final FTPException ex) {
                                     log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final FTPDataTransferException ex) {
                                     log.info("FTP data transfer failed");
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final FTPAbortedException ex) {
                                     log.info("FTP listing files failed");
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final FTPIllegalReplyException ex) {
                                     log.info("FTP protocol error");
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final IOException ex) {
-                                    throw Throwables.propagate(ex);
+                                    throw new UncheckedIOException(ex);
                                 }
                                 finally {
                                     try {
                                         transfer.getWriterChannel().close();
                                     }
                                     catch (final IOException ex) {
-                                        throw new RuntimeException(ex);
+                                        throw new UncheckedIOException(ex);
                                     }
                                 }
                             }
@@ -592,8 +593,14 @@ public class FtpFileInputPlugin
                     });
             }
             catch (final RetryGiveupException ex) {
-                Throwables.propagateIfInstanceOf(ex.getCause(), IOException.class);
-                throw Throwables.propagate(ex.getCause());
+                final Throwable cause = ex.getCause();
+                if (cause instanceof IOException) {
+                    throw new UncheckedIOException((IOException) cause);
+                }
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                }
+                throw new RuntimeException(cause);
             }
             catch (final InterruptedException ex) {
                 throw new InterruptedIOException();
@@ -615,11 +622,7 @@ public class FtpFileInputPlugin
         {
             this.log = log;
             this.client = newFTPClient(log, task);
-            this.executor = Executors.newCachedThreadPool(
-                    new ThreadFactoryBuilder()
-                        .setNameFormat("embulk-input-ftp-transfer-%d")
-                        .setDaemon(true)
-                        .build());
+            this.executor = Executors.newCachedThreadPool(new FormattedThreadFactory());
             this.path = task.getFiles().get(taskIndex);
         }
 
@@ -669,5 +672,22 @@ public class FtpFileInputPlugin
         {
             return Exec.newTaskReport();
         }
+    }
+
+    private static class FormattedThreadFactory implements ThreadFactory {
+        FormattedThreadFactory() {
+            this.count = new AtomicLong(0);
+        }
+
+        @Override
+        public Thread newThread(final Runnable runnable)
+        {
+            final Thread thread = Executors.defaultThreadFactory().newThread(runnable);
+            thread.setName(String.format(Locale.ROOT, "embulk-input-ftp-transfer-%d", this.count.getAndIncrement()));
+            thread.setDaemon(true);
+            return thread;
+        }
+
+        private final AtomicLong count;
     }
 }
