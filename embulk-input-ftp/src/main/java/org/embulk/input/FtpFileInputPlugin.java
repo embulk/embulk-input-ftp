@@ -33,6 +33,7 @@ import org.embulk.util.ftp.BlockingTransfer;
 import org.embulk.util.ftp.SSLPlugins;
 import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,7 +57,7 @@ import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 public class FtpFileInputPlugin
         implements FileInputPlugin
 {
-    private final Logger log = Exec.getLogger(FtpFileInputPlugin.class);
+    private final Logger log = LoggerFactory.getLogger(FtpFileInputPlugin.class);
     private static final int FTP_DEFULAT_PORT = 21;
     private static final int FTPS_DEFAULT_PORT = 990;
     private static final int FTPES_DEFAULT_PORT = 21;

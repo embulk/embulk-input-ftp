@@ -25,6 +25,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -137,7 +138,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
         assertEquals(fileList.size(), 0);
     }
@@ -164,7 +165,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
 
         assertEquals(fileList.get(0), expected.get(0));
@@ -195,7 +196,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
 
         assertEquals(fileList.get(0), expected.get(0));
@@ -226,7 +227,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
 
         assertEquals(fileList.get(0), expected.get(0));
@@ -258,7 +259,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
 
         assertEquals(fileList.get(0), expected.get(0));
@@ -286,7 +287,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
 
         assertEquals(fileList.size(), 0);
@@ -314,7 +315,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, pathMatchPattern);
 
         assertEquals(fileList.size(), 0);
@@ -344,7 +345,7 @@ public class TestFtpFileInputPlugin
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
-        final Logger logger = Exec.getLogger(FtpFileInputPlugin.class);
+        final Logger logger = LoggerFactory.getLogger(FtpFileInputPlugin.class);
         final List<String> fileList = (List<String>) method.invoke(plugin, logger, task, defaultPathMatchPattern);
         task.setFiles(fileList);
 
