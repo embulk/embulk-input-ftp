@@ -23,14 +23,15 @@ import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
-import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
-import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.util.file.InputStreamFileInput;
 import org.embulk.util.file.InputStreamFileInput.InputStreamWithHints;
 import org.embulk.util.file.ResumableInputStream;
 import org.embulk.util.ftp.BlockingTransfer;
 import org.embulk.util.ftp.SSLPlugins;
 import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
+import org.embulk.util.retryhelper.RetryExecutor;
+import org.embulk.util.retryhelper.RetryGiveupException;
+import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +51,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
-import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 public class FtpFileInputPlugin
         implements FileInputPlugin
@@ -553,10 +552,11 @@ public class FtpFileInputPlugin
         public InputStream reopen(final long offset, final Exception closedCause) throws IOException
         {
             try {
-                return retryExecutor()
+                return RetryExecutor.builder()
                     .withRetryLimit(3)
-                    .withInitialRetryWait(500)
-                    .withMaxRetryWait(30 * 1000)
+                    .withInitialRetryWaitMillis(500)
+                    .withMaxRetryWaitMillis(30 * 1000)
+                    .build()
                     .runInterruptible(new Retryable<InputStream>() {
                         @Override
                         public InputStream call() throws InterruptedIOException
