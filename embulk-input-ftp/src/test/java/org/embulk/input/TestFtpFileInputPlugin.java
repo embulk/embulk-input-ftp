@@ -9,15 +9,20 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.input.FtpFileInputPlugin.PluginTask;
-import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileInputRunner;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.Schema;
 import org.embulk.spi.TestPageBuilderReader;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
-import org.embulk.spi.util.Pages;
-import org.embulk.standards.CsvParserPlugin;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.Task;
+import org.embulk.util.config.modules.ColumnModule;
+import org.embulk.util.config.modules.SchemaModule;
+import org.embulk.util.config.modules.TypeModule;
+import org.embulk.util.config.units.SchemaConfig;
 import org.embulk.util.ftp.SSLPlugins;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,6 +43,13 @@ import static org.junit.Assert.assertEquals;
 
 public class TestFtpFileInputPlugin
 {
+    private static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder()
+            .addDefaultModules()
+            .addModule(new TypeModule())
+            .addModule(new ColumnModule())
+            .addModule(new SchemaModule())
+            .build();
+
     private static String FTP_TEST_HOST;
     private static Integer FTP_TEST_PORT;
     private static Integer FTP_TEST_SSL_PORT;
@@ -99,7 +111,8 @@ public class TestFtpFileInputPlugin
     @Test
     public void testResume()
     {
-        final PluginTask task = config().loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config(), PluginTask.class);
         task.setSSLConfig(sslConfig(task));
         task.setFiles(Arrays.asList("in/aa/a"));
         final ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
@@ -116,7 +129,8 @@ public class TestFtpFileInputPlugin
     @Test
     public void testCleanup()
     {
-        final PluginTask task = config().loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config(), PluginTask.class);
         plugin.cleanup(task.dump(), 0, Lists.<TaskReport>newArrayList()); // no errors happens
     }
 
@@ -126,7 +140,8 @@ public class TestFtpFileInputPlugin
     {
         final ConfigSource config = config().deepCopy()
                 .set("path_prefix", "non-exists-path");
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -153,7 +168,8 @@ public class TestFtpFileInputPlugin
         );
 
         final ConfigSource config = config();
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -184,7 +200,8 @@ public class TestFtpFileInputPlugin
 
         final ConfigSource config = config();
         config.set("path_match_pattern", "");
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -215,7 +232,8 @@ public class TestFtpFileInputPlugin
 
         final ConfigSource config = config();
         config.set("path_match_pattern", "    ");
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -247,7 +265,8 @@ public class TestFtpFileInputPlugin
 
         final ConfigSource config = config();
         config.set("path_match_pattern", pattern);
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -275,7 +294,8 @@ public class TestFtpFileInputPlugin
 
         final ConfigSource config = config();
         config.set("path_match_pattern", pattern);
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -303,7 +323,8 @@ public class TestFtpFileInputPlugin
 
         final ConfigSource config = config();
         config.set("path_match_pattern", pattern);
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
         final ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -325,7 +346,7 @@ public class TestFtpFileInputPlugin
     @Test
     public void testListFilesByPrefixIncrementalFalse()
     {
-        final ConfigSource config = config()
+        final ConfigSource config = configLegacy()
                 .deepCopy()
                 .set("incremental", false);
 
@@ -338,10 +359,13 @@ public class TestFtpFileInputPlugin
     @SuppressWarnings("unchecked")
     public void testFtpFileInputByOpen() throws Exception
     {
-        final ConfigSource config = config();
-        final PluginTask task = config().loadConfig(PluginTask.class);
+        final ConfigSource configLegacy = configLegacy();
 
-        runner.transaction(config, new Control());
+        final ConfigSource config = config();
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
+
+        runner.transaction(configLegacy, new Control());
 
         final Method method = FtpFileInputPlugin.class.getDeclaredMethod("listFiles", Logger.class, PluginTask.class, Pattern.class);
         method.setAccessible(true);
@@ -356,7 +380,7 @@ public class TestFtpFileInputPlugin
     {
         final ImmutableList.Builder<TaskReport> reports = new ImmutableList.Builder<>();
         for (int i = 0; i < taskCount; i++) {
-            reports.add(Exec.newTaskReport());
+            reports.add(CONFIG_MAPPER_FACTORY.newTaskReport());
         }
         return reports.build();
     }
@@ -377,7 +401,25 @@ public class TestFtpFileInputPlugin
 
     private ConfigSource config()
     {
-        return Exec.newConfigSource()
+        return CONFIG_MAPPER_FACTORY.newConfigSource()
+                .set("host", FTP_TEST_HOST)
+                .set("port", FTP_TEST_PORT)
+                .set("user", FTP_TEST_USER)
+                .set("password", FTP_TEST_PASSWORD)
+                .set("path_prefix", FTP_TEST_PATH_PREFIX)
+                .set("last_path", "")
+                .set("file_ext", ".csv")
+                .set("max_connection_retry", 3)
+                .set("ssl", false)
+                .set("ssl_verify", false)
+                .set("ssl_verify_hostname", false)
+                .set("ssl_trusted_ca_cert_data", FTP_TEST_SSL_TRUSTED_CA_CERT_DATA)
+                .set("parser", parserConfig(schemaConfig()));
+    }
+
+    private ConfigSource configLegacy()
+    {
+        return runtime.getExec().newConfigSource()
                 .set("host", FTP_TEST_HOST)
                 .set("port", FTP_TEST_PORT)
                 .set("user", FTP_TEST_USER)
@@ -450,7 +492,8 @@ public class TestFtpFileInputPlugin
 
     private List<Object[]> getRecords(final ConfigSource config, final MockPageOutput output)
     {
-        final Schema schema = config.getNested("parser").loadConfig(CsvParserPlugin.PluginTask.class).getSchemaConfig().toSchema();
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final Schema schema = configMapper.map(config.getNested("parser"), SchemaConfigTask.class).getSchemaConfig().toSchema();
         return Pages.toObjects(schema, output.pages);
     }
 
@@ -463,5 +506,10 @@ public class TestFtpFileInputPlugin
             dir = dir.replaceFirst("/", "");
         }
         return dir;
+    }
+
+    private interface SchemaConfigTask extends Task {
+        @Config("columns")
+        SchemaConfig getSchemaConfig();
     }
 }

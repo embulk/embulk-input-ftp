@@ -15,7 +15,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly "org.embulk:embulk-core:0.9.23"
+    compileOnly "org.embulk:embulk-api:0.10.19"
+    compileOnly "org.embulk:embulk-spi:0.10.19"
 
     compile project(":embulk-util-ftp")
     compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
@@ -25,11 +26,10 @@ dependencies {
     compile "org.embulk:embulk-util-retryhelper:0.8.0"
 
     testCompile "junit:junit:4.13"
-    testCompile "org.embulk:embulk-core:0.9.23"
-    testCompile "org.embulk:embulk-core:0.9.23:tests"
-    testCompile "org.embulk:embulk-standards:0.9.23"
-    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
-    testCompile "org.embulk:embulk-deps-config:0.9.23"
+    testCompile "org.embulk:embulk-core:0.10.19"
+    testCompile "org.embulk:embulk-core:0.10.19:tests"
+    testCompile "org.embulk:embulk-standards:0.10.19"
+    testCompile "org.embulk:embulk-deps:0.10.19"
 }
 
 embulkPlugin {

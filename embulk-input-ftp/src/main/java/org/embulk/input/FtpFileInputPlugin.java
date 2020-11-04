@@ -11,18 +11,20 @@ import it.sauronsoftware.ftp4j.FTPFile;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import it.sauronsoftware.ftp4j.FTPListParseException;
 
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
-import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigSource;
-import org.embulk.config.Task;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.Task;
+import org.embulk.util.config.TaskMapper;
 import org.embulk.util.file.InputStreamFileInput;
 import org.embulk.util.file.InputStreamFileInput.InputStreamWithHints;
 import org.embulk.util.file.ResumableInputStream;
@@ -55,6 +57,8 @@ import java.util.regex.Pattern;
 public class FtpFileInputPlugin
         implements FileInputPlugin
 {
+    private static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder().addDefaultModules().build();
+
     private final Logger log = LoggerFactory.getLogger(FtpFileInputPlugin.class);
     private static final int FTP_DEFULAT_PORT = 21;
     private static final int FTPS_DEFAULT_PORT = 990;
@@ -114,15 +118,13 @@ public class FtpFileInputPlugin
 
         SSLPluginConfig getSSLConfig();
         void setSSLConfig(SSLPluginConfig config);
-
-        @ConfigInject
-        BufferAllocator getBufferAllocator();
     }
 
     @Override
     public ConfigDiff transaction(final ConfigSource config, final FileInputPlugin.Control control)
     {
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
 
         task.setSSLConfig(SSLPlugins.configure(task));
 
@@ -150,7 +152,8 @@ public class FtpFileInputPlugin
             final int taskCount,
             final FileInputPlugin.Control control)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        final TaskMapper taskMapper = CONFIG_MAPPER_FACTORY.createTaskMapper();
+        final PluginTask task = taskMapper.map(taskSource, PluginTask.class);
 
         control.run(taskSource, taskCount);
 
@@ -398,7 +401,8 @@ public class FtpFileInputPlugin
     @Override
     public TransactionalFileInput open(final TaskSource taskSource, final int taskIndex)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        final TaskMapper taskMapper = CONFIG_MAPPER_FACTORY.createTaskMapper();
+        final PluginTask task = taskMapper.map(taskSource, PluginTask.class);
         return new FtpFileInput(log, task, taskIndex);
     }
 
@@ -659,7 +663,7 @@ public class FtpFileInputPlugin
     {
         public FtpFileInput(final Logger log, final PluginTask task, final int taskIndex)
         {
-            super(task.getBufferAllocator(), new SingleFileProvider(log, task, taskIndex));
+            super(Exec.getBufferAllocator(), new SingleFileProvider(log, task, taskIndex));
         }
 
         @Override
