@@ -1,0 +1,87 @@
+apply plugin: "java"
+apply plugin: "maven-publish"
+apply plugin: "signing"
+
+group = "${rootProject.group}"
+version = "${rootProject.version}"
+description = "Utility classes for Embulk FTP plugins."
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+configurations {
+    compileClasspath.resolutionStrategy.activateDependencyLocking()
+    runtimeClasspath.resolutionStrategy.activateDependencyLocking()
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compileOnly "org.embulk:embulk-core:0.9.23"
+
+    compile "org.bouncycastle:bcpkix-jdk15on:1.52"
+
+    testCompile "junit:junit:4.13"
+    testCompile "org.embulk:embulk-core:0.9.23"
+    testCompile "org.embulk:embulk-core:0.9.23:tests"
+    testCompile "org.embulk:embulk-standards:0.9.23"
+    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
+    testCompile "org.embulk:embulk-deps-config:0.9.23"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {  // Publish it with "publishMavenPublicationToMavenCentralRepository".
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+
+            pom {  // https://central.sonatype.org/pages/requirements.html
+                packaging "jar"
+                url = "https://www.embulk.org/"
+
+                licenses {
+                    license {
+                        // http://central.sonatype.org/pages/requirements.html#license-information
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                developers {
+                    developer {
+                        name = "Sadayuki Furuhashi"
+                        email = "frsyuki@gmail.com"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:git://github.com/embulk/embulk-input-ftp.git"
+                    developerConnection = "scm:git:git@github.com:embulk/embulk-input-ftp.git"
+                    url = "https://github.com/embulk/embulk-input-ftp"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {  // publishMavenPublicationToMavenCentralRepository
+            name = "mavenCentral"
+            if (project.version.endsWith("-SNAPSHOT")) {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? ossrhUsername : ""
+                password = project.hasProperty("ossrhPassword") ? ossrhPassword : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
