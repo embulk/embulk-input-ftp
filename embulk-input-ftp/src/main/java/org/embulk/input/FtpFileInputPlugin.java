@@ -11,7 +11,6 @@ import it.sauronsoftware.ftp4j.FTPFile;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import it.sauronsoftware.ftp4j.FTPListParseException;
 
-import org.apache.commons.lang3.StringUtils;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
@@ -130,7 +129,7 @@ public class FtpFileInputPlugin
 
         String pattern = task.getPathMatchPattern();
         // If pattern is empty then use default pattern
-        if (StringUtils.trim(pattern).isEmpty()) {
+        if (pattern != null && pattern.trim().isEmpty()) {
             pattern = ".*";
         }
         // Create path match pattern
