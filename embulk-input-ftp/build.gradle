@@ -2,7 +2,9 @@ dependencies {
     compile project(":embulk-util-ftp")
 }
 
-task gemspec << { file("build/gemspec").write($/
+task gemspec {
+    doLast {
+        file("build/gemspec").write($/
 Gem::Specification.new do |spec|
   spec.name          = "${project.name}"
   spec.version       = "${project.version}"
@@ -21,4 +23,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', ['>= 10.0']
 end
 /$)
+    }
 }
