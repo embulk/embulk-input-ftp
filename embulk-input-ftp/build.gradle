@@ -21,6 +21,8 @@ dependencies {
     compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
     compile "org.bouncycastle:bcpkix-jdk15on:1.52"
 
+    compile "org.embulk:embulk-util-file:0.1.1"
+
     testCompile "junit:junit:4.13"
     testCompile "org.embulk:embulk-core:0.9.23"
     testCompile "org.embulk:embulk-core:0.9.23:tests"

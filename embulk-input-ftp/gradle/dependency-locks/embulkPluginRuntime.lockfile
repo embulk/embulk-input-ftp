@@ -3,3 +3,4 @@
 # This file is expected to be part of source control.
 org.bouncycastle:bcpkix-jdk15on:1.52
 org.bouncycastle:bcprov-jdk15on:1.52
+org.embulk:embulk-util-file:0.1.1
