@@ -1,3 +1,7 @@
+Release 0.3.0 - 2020-11-04
+* Build with the "org.embulk.embulk-plugins" Gradle plugin [#25](https://github.com/embulk/embulk-input-ftp/pull/25)
+* Catch up with Embulk v0.10.19 [#26](https://github.com/embulk/embulk-input-ftp/pull/26)
+
 Release 0.2.1 - 2019-11-19
 * Add `path_match_pattern` to filter files by regular expression [#23](https://github.com/embulk/embulk-input-ftp/pull/23)
 
@@ -35,4 +39,3 @@ Release 0.1.1 - 2015-04-29
 Release 0.1.0 - 2015-04-29
 
 * First release
-
