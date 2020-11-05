@@ -158,7 +158,7 @@ public class FtpFileInputPlugin
         control.run(taskSource, taskCount);
 
         // build next config
-        final ConfigDiff configDiff = Exec.newConfigDiff();
+        final ConfigDiff configDiff = CONFIG_MAPPER_FACTORY.newConfigDiff();
 
         // last_path
         if (task.getIncremental()) {
@@ -674,7 +674,7 @@ public class FtpFileInputPlugin
         @Override
         public TaskReport commit()
         {
-            return Exec.newTaskReport();
+            return CONFIG_MAPPER_FACTORY.newTaskReport();
         }
     }
 
