@@ -13,7 +13,7 @@ def bintrayReleaseProjects = [
 
 allprojects {
     group = 'org.embulk.input.ftp'
-    version = "0.2.1"
+    version = "0.3.0-SNAPSHOT"
 
     apply plugin: 'com.jfrog.bintray'
     apply plugin: 'maven-publish'
@@ -154,4 +154,3 @@ subprojects {
 task gemPush << {
     "gem push pkg/embulk-input-ftp-${project.version}.gem".execute().waitFor()
 }
-
