@@ -1,24 +1,61 @@
-dependencies {
-    compile project(":embulk-util-ftp")
+apply plugin: "java"
+apply plugin: "maven-publish"
+apply plugin: "org.embulk.embulk-plugins"
+
+group = "${rootProject.group}"
+version = "${rootProject.version}"
+description = "Reads files stored on a FTP server."
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    jcenter()
 }
 
-task gemspec << { file("build/gemspec").write($/
-Gem::Specification.new do |spec|
-  spec.name          = "${project.name}"
-  spec.version       = "${project.version}"
-  spec.authors       = ["Sadayuki Furuhashi"]
-  spec.summary       = %[FTP file input plugin for Embulk]
-  spec.description   = %[Reads files stored on a FTP server.]
-  spec.email         = ["frsyuki@gmail.com"]
-  spec.licenses      = ["Apache 2.0"]
-  spec.homepage      = "https://github.com/embulk/embulk-input-ftp"
+dependencies {
+    compileOnly "org.embulk:embulk-core:0.9.23"
 
-  spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
-  spec.test_files    = spec.files.grep(%r"^(test|spec)/")
-  spec.require_paths = ["lib"]
+    compile project(":embulk-util-ftp")
+    compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
+    compile "org.bouncycastle:bcpkix-jdk15on:1.52"
 
-  spec.add_development_dependency 'bundler', ['~> 1.0']
-  spec.add_development_dependency 'rake', ['>= 10.0']
-end
-/$)
+    testCompile "junit:junit:4.13"
+    testCompile "org.embulk:embulk-core:0.9.23"
+    testCompile "org.embulk:embulk-core:0.9.23:tests"
+    testCompile "org.embulk:embulk-standards:0.9.23"
+    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
+    testCompile "org.embulk:embulk-deps-config:0.9.23"
+}
+
+embulkPlugin {
+    mainClass = "org.embulk.input.FtpFileInputPlugin"
+    category = "input"
+    type = "ftp"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {  // Publish it with "publishMavenPublicationToMavenCentralRepository".
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+        }
+    }
+
+    // TODO: Release it as a Maven artifact once the source of ftp4j is cleared.
+}
+
+gem {
+    authors = [ "Sadayuki Furuhashi" ]
+    email = [ "frsyuki@gmail.com" ]
+    summary = "FTP file input plugin for Embulk"
+    homepage = "https://github.com/embulk/embulk-input-ftp"
+    licenses = [ "Apache-2.0" ]
+    into("classpath/") {
+        from "${project.rootDir}/libs/ftp4j-1.7.2.jar"
+    }
+}
+
+gemPush {
+    host = "https://rubygems.org"
 }

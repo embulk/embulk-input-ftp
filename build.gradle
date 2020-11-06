@@ -1,138 +1,15 @@
 plugins {
-    id 'com.jfrog.bintray' version '1.7'
-    id 'com.github.jruby-gradle.base' version '0.1.5'
     id 'java'
-    id 'jacoco'
+    id "maven-publish"
+    id "signing"
     id 'checkstyle'
+    id "org.embulk.embulk-plugins" version "0.4.2" apply false
 }
-import com.github.jrubygradle.JRubyExec
 
-def bintrayReleaseProjects = [
-    project(":embulk-util-ftp")
-]
-
-allprojects {
-    group = 'org.embulk.input.ftp'
-    version = "0.3.0-SNAPSHOT"
-
-    apply plugin: 'com.jfrog.bintray'
-    apply plugin: 'maven-publish'
-
-    // bintray
-    bintray {
-        // write at your bintray user name and api key to ~/.gradle/gradle.properties file:
-        user = project.hasProperty('bintray_user') ? bintray_user : ''
-        key = project.hasProperty('bintray_api_key') ? bintray_api_key : ''
-
-        publications = ['mavenJava']
-        dryRun = !bintrayReleaseProjects.contains(project)
-        publish = true
-
-        pkg {
-            userOrg = 'embulk-input-ftp'
-            repo = 'maven'
-            name = project.name
-            desc = 'FTP file input plugin for Embulk'
-            websiteUrl = 'https://github.com/embulk/embulk-input-ftp'
-            issueTrackerUrl = 'https://github.com/embulk/embulk-input-ftp/issues'
-            vcsUrl = 'https://github.com/embulk/embulk-input-ftp.git'
-            licenses = ['Apache-2.0']
-            labels = ['embulk', 'java']
-            publicDownloadNumbers = true
-
-            version {
-                name = project.version
-            }
-        }
-    }
-}
+group = "org.embulk"
+version = "0.3.0-SNAPSHOT"
 
 subprojects {
-    apply plugin: 'maven'   // install jar files to the local repo: $ gradle install
-    apply plugin: 'java'
-    apply plugin: 'com.github.jruby-gradle.base'
-    apply plugin: 'checkstyle'
-    apply plugin: 'jacoco'
-
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
-
-    configurations {
-        provided
-    }
-
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-
-    dependencies {
-        compile  "org.embulk:embulk-core:0.9.12"
-        provided "org.embulk:embulk-core:0.9.12"
-        compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
-        compile "org.bouncycastle:bcpkix-jdk15on:1.52"
-        testCompile "junit:junit:4.+"
-        testCompile "org.embulk:embulk-core:0.9.12:tests"
-        testCompile "org.embulk:embulk-standards:0.9.12"
-    }
-
-    task classpath(type: Copy, dependsOn: ["jar"]) {
-        doFirst { file("classpath").deleteDir() }
-        from (configurations.runtime - configurations.provided + files(jar.archivePath))
-        into "classpath"
-    }
-    clean { delete "classpath" }
-
-    if (![project(":embulk-util-ftp")].contains(project)) {
-        task gem(type: JRubyExec, dependsOn: ["build", "gemspec", "classpath"]) {
-            jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
-            script "${project.projectDir.absolutePath}/build/gemspec"
-            doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "${parent.projectDir}/pkg") }
-        }
-    }
-
-    // publishing
-    publishing {
-        publications {
-            mavenJava(MavenPublication) {
-                from components.java
-                artifact testsJar
-                artifact sourcesJar
-                artifact javadocJar
-                pom.withXml {
-                    asNode().dependencies.dependency.findAll() {
-                        it.scope.text() == 'runtime' && project.configurations.compile.allDependencies.find { dep ->
-                            dep.name == it.artifactId.text()
-                        }
-                    }.each() {
-                        it.scope*.value = 'compile'
-                    }
-                }
-            }
-        }
-    }
-    // add tests/javadoc/source jar tasks as artifacts to be released
-    task testsJar(type: Jar, dependsOn: classes) {
-        classifier = 'tests'
-        from sourceSets.test.output
-    }
-    task sourcesJar(type: Jar, dependsOn: classes) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
-    }
-    artifacts {
-        archives testsJar, sourcesJar, javadocJar
-    }
-
-    task "package"(dependsOn: ["gemspec", "classpath"]) << {
-        println "> Build succeeded."
-        println "> You can run embulk with '-L ${file(".").absolutePath}' argument."
-    }
-
     checkstyle {
         configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
         toolVersion = '6.14.1'
@@ -149,8 +26,4 @@ subprojects {
         classpath = sourceSets.main.output + sourceSets.test.output
         source = sourceSets.main.allJava + sourceSets.test.allJava
     }
-}
-
-task gemPush << {
-    "gem push pkg/embulk-input-ftp-${project.version}.gem".execute().waitFor()
 }

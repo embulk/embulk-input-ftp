@@ -1,0 +1,5 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+org.bouncycastle:bcpkix-jdk15on:1.52
+org.bouncycastle:bcprov-jdk15on:1.52

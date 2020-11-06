@@ -103,8 +103,13 @@ in:
 ## Build
 
 ```
-$ ./gradlew gem  # -t to watch change of files and rebuild continuously
-$ ./gradlew bintrayUpload # release embulk-input-sftp to Bintray maven repo
+$ ./gradlew embulk-input-ftp:gem
+```
+
+## Release
+
+```
+$ ./gradlew clean embulk-util-ftp:publishMavenPublicationToMavenCentralRepository embulk-input-ftp:gemPush
 ```
 
 ## Test
