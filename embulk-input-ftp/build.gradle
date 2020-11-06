@@ -32,10 +32,34 @@ dependencies {
     testCompile "org.embulk:embulk-deps:0.10.19"
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 embulkPlugin {
     mainClass = "org.embulk.input.FtpFileInputPlugin"
     category = "input"
     type = "ftp"
+}
+
+test {
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
+}
+
+jar {
+    from rootProject.file("LICENSE")
+}
+
+sourcesJar {
+    from rootProject.file("LICENSE")
+}
+
+javadocJar {
+    from rootProject.file("LICENSE")
 }
 
 publishing {

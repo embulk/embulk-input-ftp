@@ -49,6 +49,30 @@ dependencies {
     testCompile "org.embulk:embulk-deps:0.10.19"
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+test {
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
+}
+
+jar {
+    from rootProject.file("LICENSE")
+}
+
+sourcesJar {
+    from rootProject.file("LICENSE")
+}
+
+javadocJar {
+    from rootProject.file("LICENSE")
+}
+
 publishing {
     publications {
         maven(MavenPublication) {  // Publish it with "publishMavenPublicationToMavenCentralRepository".
