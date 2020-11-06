@@ -1,9 +1,5 @@
 package org.embulk.input;
 
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPClient;
 import it.sauronsoftware.ftp4j.FTPCommunicationListener;
@@ -15,47 +11,55 @@ import it.sauronsoftware.ftp4j.FTPFile;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import it.sauronsoftware.ftp4j.FTPListParseException;
 
-import org.apache.commons.lang3.StringUtils;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
-import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigSource;
-import org.embulk.config.Task;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
-import org.embulk.spi.util.InputStreamFileInput;
-import org.embulk.spi.util.InputStreamFileInput.InputStreamWithHints;
-import org.embulk.spi.util.ResumableInputStream;
-import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
-import org.embulk.spi.util.RetryExecutor.Retryable;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.Task;
+import org.embulk.util.config.TaskMapper;
+import org.embulk.util.file.InputStreamFileInput;
+import org.embulk.util.file.InputStreamFileInput.InputStreamWithHints;
+import org.embulk.util.file.ResumableInputStream;
 import org.embulk.util.ftp.BlockingTransfer;
 import org.embulk.util.ftp.SSLPlugins;
 import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
+import org.embulk.util.retryhelper.RetryExecutor;
+import org.embulk.util.retryhelper.RetryGiveupException;
+import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.regex.Pattern;
-
-import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 public class FtpFileInputPlugin
         implements FileInputPlugin
 {
-    private final Logger log = Exec.getLogger(FtpFileInputPlugin.class);
+    private static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder().addDefaultModules().build();
+
+    private final Logger log = LoggerFactory.getLogger(FtpFileInputPlugin.class);
     private static final int FTP_DEFULAT_PORT = 21;
     private static final int FTPS_DEFAULT_PORT = 990;
     private static final int FTPES_DEFAULT_PORT = 21;
@@ -114,21 +118,19 @@ public class FtpFileInputPlugin
 
         SSLPluginConfig getSSLConfig();
         void setSSLConfig(SSLPluginConfig config);
-
-        @ConfigInject
-        BufferAllocator getBufferAllocator();
     }
 
     @Override
     public ConfigDiff transaction(final ConfigSource config, final FileInputPlugin.Control control)
     {
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        final PluginTask task = configMapper.map(config, PluginTask.class);
 
         task.setSSLConfig(SSLPlugins.configure(task));
 
         String pattern = task.getPathMatchPattern();
         // If pattern is empty then use default pattern
-        if (StringUtils.trim(pattern).isEmpty()) {
+        if (pattern != null && pattern.trim().isEmpty()) {
             pattern = ".*";
         }
         // Create path match pattern
@@ -150,12 +152,13 @@ public class FtpFileInputPlugin
             final int taskCount,
             final FileInputPlugin.Control control)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        final TaskMapper taskMapper = CONFIG_MAPPER_FACTORY.createTaskMapper();
+        final PluginTask task = taskMapper.map(taskSource, PluginTask.class);
 
         control.run(taskSource, taskCount);
 
         // build next config
-        final ConfigDiff configDiff = Exec.newConfigDiff();
+        final ConfigDiff configDiff = CONFIG_MAPPER_FACTORY.newConfigDiff();
 
         // last_path
         if (task.getIncremental()) {
@@ -251,15 +254,15 @@ public class FtpFileInputPlugin
         }
         catch (final FTPException ex) {
             log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final IOException ex) {
             log.info("FTP network error: " + ex);
-            throw Throwables.propagate(ex);
+            throw new UncheckedIOException(ex);
         }
         finally {
             if (client != null) {
@@ -318,7 +321,7 @@ public class FtpFileInputPlugin
             }
         }
 
-        final ImmutableList.Builder<String> builder = ImmutableList.builder();
+        final ArrayList<String> builder = new ArrayList<>();
 
         try {
             String currentDirectory = client.currentDirectory();
@@ -337,35 +340,35 @@ public class FtpFileInputPlugin
         }
         catch (final FTPListParseException ex) {
             log.info("FTP listing files failed");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPAbortedException ex) {
             log.info("FTP listing files failed");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPDataTransferException ex) {
             log.info("FTP data transfer failed");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPException ex) {
             log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final FTPIllegalReplyException ex) {
             log.info("FTP protocol error");
-            throw Throwables.propagate(ex);
+            throw new RuntimeException(ex);
         }
         catch (final IOException ex) {
             log.info("FTP network error: " + ex);
-            throw Throwables.propagate(ex);
+            throw new UncheckedIOException(ex);
         }
 
-        return builder.build();
+        return Collections.unmodifiableList(builder);
     }
 
     private static void listFilesRecursive(final FTPClient client,
             String baseDirectoryPath, final FTPFile file, final Optional<String> lastPath,
-            final ImmutableList.Builder<String> builder, final Pattern pathMatchPattern)
+            final ArrayList<String> builder, final Pattern pathMatchPattern)
         throws IOException, FTPException, FTPIllegalReplyException, FTPDataTransferException, FTPAbortedException, FTPListParseException
     {
         if (!baseDirectoryPath.endsWith("/")) {
@@ -398,7 +401,8 @@ public class FtpFileInputPlugin
     @Override
     public TransactionalFileInput open(final TaskSource taskSource, final int taskIndex)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        final TaskMapper taskMapper = CONFIG_MAPPER_FACTORY.createTaskMapper();
+        final PluginTask task = taskMapper.map(taskSource, PluginTask.class);
         return new FtpFileInput(log, task, taskIndex);
     }
 
@@ -500,29 +504,29 @@ public class FtpFileInputPlugin
                                 }
                                 catch (final FTPException ex) {
                                     log.info("FTP command failed: " + ex.getCode() + " " + ex.getMessage());
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final FTPDataTransferException ex) {
                                     log.info("FTP data transfer failed");
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final FTPAbortedException ex) {
                                     log.info("FTP listing files failed");
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final FTPIllegalReplyException ex) {
                                     log.info("FTP protocol error");
-                                    throw Throwables.propagate(ex);
+                                    throw new RuntimeException(ex);
                                 }
                                 catch (final IOException ex) {
-                                    throw Throwables.propagate(ex);
+                                    throw new UncheckedIOException(ex);
                                 }
                                 finally {
                                     try {
                                         transfer.getWriterChannel().close();
                                     }
                                     catch (final IOException ex) {
-                                        throw new RuntimeException(ex);
+                                        throw new UncheckedIOException(ex);
                                     }
                                 }
                             }
@@ -552,10 +556,11 @@ public class FtpFileInputPlugin
         public InputStream reopen(final long offset, final Exception closedCause) throws IOException
         {
             try {
-                return retryExecutor()
+                return RetryExecutor.builder()
                     .withRetryLimit(3)
-                    .withInitialRetryWait(500)
-                    .withMaxRetryWait(30 * 1000)
+                    .withInitialRetryWaitMillis(500)
+                    .withMaxRetryWaitMillis(30 * 1000)
+                    .build()
                     .runInterruptible(new Retryable<InputStream>() {
                         @Override
                         public InputStream call() throws InterruptedIOException
@@ -592,8 +597,14 @@ public class FtpFileInputPlugin
                     });
             }
             catch (final RetryGiveupException ex) {
-                Throwables.propagateIfInstanceOf(ex.getCause(), IOException.class);
-                throw Throwables.propagate(ex.getCause());
+                final Throwable cause = ex.getCause();
+                if (cause instanceof IOException) {
+                    throw new UncheckedIOException((IOException) cause);
+                }
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                }
+                throw new RuntimeException(cause);
             }
             catch (final InterruptedException ex) {
                 throw new InterruptedIOException();
@@ -615,11 +626,7 @@ public class FtpFileInputPlugin
         {
             this.log = log;
             this.client = newFTPClient(log, task);
-            this.executor = Executors.newCachedThreadPool(
-                    new ThreadFactoryBuilder()
-                        .setNameFormat("embulk-input-ftp-transfer-%d")
-                        .setDaemon(true)
-                        .build());
+            this.executor = Executors.newCachedThreadPool(new FormattedThreadFactory());
             this.path = task.getFiles().get(taskIndex);
         }
 
@@ -656,7 +663,7 @@ public class FtpFileInputPlugin
     {
         public FtpFileInput(final Logger log, final PluginTask task, final int taskIndex)
         {
-            super(task.getBufferAllocator(), new SingleFileProvider(log, task, taskIndex));
+            super(Exec.getBufferAllocator(), new SingleFileProvider(log, task, taskIndex));
         }
 
         @Override
@@ -667,7 +674,24 @@ public class FtpFileInputPlugin
         @Override
         public TaskReport commit()
         {
-            return Exec.newTaskReport();
+            return CONFIG_MAPPER_FACTORY.newTaskReport();
         }
+    }
+
+    private static class FormattedThreadFactory implements ThreadFactory {
+        FormattedThreadFactory() {
+            this.count = new AtomicLong(0);
+        }
+
+        @Override
+        public Thread newThread(final Runnable runnable)
+        {
+            final Thread thread = Executors.defaultThreadFactory().newThread(runnable);
+            thread.setName(String.format(Locale.ROOT, "embulk-input-ftp-transfer-%d", this.count.getAndIncrement()));
+            thread.setDaemon(true);
+            return thread;
+        }
+
+        private final AtomicLong count;
     }
 }

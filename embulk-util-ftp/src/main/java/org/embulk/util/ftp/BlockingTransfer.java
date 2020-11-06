@@ -1,7 +1,5 @@
 package org.embulk.util.ftp;
 
-import com.google.common.base.Function;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -13,6 +11,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 public class BlockingTransfer
 {

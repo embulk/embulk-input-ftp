@@ -3,13 +3,9 @@ package org.embulk.util.ftp;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
-import org.msgpack.core.annotations.VisibleForTesting;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
 
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
@@ -26,8 +22,11 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class SSLPlugins
 {
@@ -64,7 +63,7 @@ public class SSLPlugins
 
     public static class SSLPluginConfig
     {
-        static SSLPluginConfig NO_VERIFY = new SSLPluginConfig(VerifyMode.NO_VERIFY, false, ImmutableList.<byte[]>of());
+        static SSLPluginConfig NO_VERIFY = new SSLPluginConfig(VerifyMode.NO_VERIFY, false, EMPTY_CERTIFICATES);
 
         private final VerifyMode verifyMode;
         private final boolean verifyHostname;
@@ -78,19 +77,14 @@ public class SSLPlugins
         {
             this.verifyMode = verifyMode;
             this.verifyHostname = verifyHostname;
-            this.certificates = ImmutableList.copyOf(
-                    Lists.transform(certificates, new Function<byte[], X509Certificate>() {
-                        public X509Certificate apply(byte[] data)
-                        {
+            this.certificates = Collections.unmodifiableList(certificates.stream().map(data -> {
                             try (ByteArrayInputStream in = new ByteArrayInputStream(data)) {
                                 CertificateFactory cf = CertificateFactory.getInstance("X.509");
                                 return (X509Certificate) cf.generateCertificate(in);
                             } catch (IOException | CertificateException ex) {
                                 throw new RuntimeException(ex);
                             }
-                        }
-                    })
-                );
+                    }).collect(Collectors.toList()));
         }
 
         SSLPluginConfig(List<X509Certificate> certificates, boolean verifyHostname)
@@ -102,7 +96,7 @@ public class SSLPlugins
 
         static SSLPluginConfig useJvmDefault(boolean verifyHostname)
         {
-            return new SSLPluginConfig(VerifyMode.JVM_DEFAULT, verifyHostname, ImmutableList.<byte[]>of());
+            return new SSLPluginConfig(VerifyMode.JVM_DEFAULT, verifyHostname, EMPTY_CERTIFICATES);
         }
 
         @JsonProperty("verifyMode")
@@ -120,17 +114,14 @@ public class SSLPlugins
         @JsonProperty("certificates")
         private List<byte[]> getCertData()
         {
-            return Lists.transform(certificates, new Function<X509Certificate, byte[]>() {
-                public byte[] apply(X509Certificate cert)
-                {
+            return Collections.unmodifiableList(this.certificates.stream().map(cert -> {
                     try {
                         return cert.getEncoded();
                     }
                     catch (CertificateEncodingException ex) {
                         throw new RuntimeException(ex);
                     }
-                }
-            });
+                }).collect(Collectors.toList()));
         }
 
         @JsonIgnore
@@ -180,7 +171,6 @@ public class SSLPlugins
         }
     }
 
-    @VisibleForTesting
     public static Optional<List<X509Certificate>> readTrustedCertificates(SSLPluginTask task)
     {
         String optionName;
@@ -255,4 +245,6 @@ public class SSLPlugins
     {
         return NoVerifyTrustManager.INSTANCE;
     }
+
+    private static final List<byte[]> EMPTY_CERTIFICATES = Collections.unmodifiableList(new ArrayList<byte[]>());
 }
