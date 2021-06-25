@@ -23,7 +23,7 @@ import org.embulk.util.config.modules.ColumnModule;
 import org.embulk.util.config.modules.SchemaModule;
 import org.embulk.util.config.modules.TypeModule;
 import org.embulk.util.config.units.SchemaConfig;
-import org.embulk.util.ftp.SSLPlugins;
+import org.embulk.util.ssl.SSLPlugins;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
