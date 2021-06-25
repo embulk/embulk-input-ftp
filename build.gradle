@@ -1,29 +1,103 @@
 plugins {
-    id 'java'
+    id "java"
     id "maven-publish"
     id "signing"
-    id 'checkstyle'
-    id "org.embulk.embulk-plugins" version "0.4.2" apply false
+    id "checkstyle"
+    id "org.embulk.embulk-plugins" version "0.4.2"
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
 }
 
 group = "org.embulk"
 version = "0.3.0-SNAPSHOT"
+description = "Reads files stored on a FTP server."
 
-subprojects {
-    checkstyle {
-        configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
-        toolVersion = '6.14.1'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compileOnly "org.embulk:embulk-api:0.10.19"
+    compileOnly "org.embulk:embulk-spi:0.10.19"
+
+    compile("org.embulk:embulk-util-config:0.3.1") {
+        // They conflict with embulk-core. They are once excluded here,
+        // and added explicitly with versions exactly the same with embulk-core:0.10.31.
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-annotations"
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-core"
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-databind"
+        exclude group: "com.fasterxml.jackson.datatype", module: "jackson-datatype-jdk8"
+        exclude group: "javax.validation", module: "validation-api"
     }
-    checkstyleMain {
-        configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-        ignoreFailures = true
+
+    // They are once excluded from transitive dependencies of other dependencies,
+    // and added explicitly with versions exactly the same with embulk-core:0.10.31.
+    compile "com.fasterxml.jackson.core:jackson-annotations:2.6.7"
+    compile "com.fasterxml.jackson.core:jackson-core:2.6.7"
+    compile "com.fasterxml.jackson.core:jackson-databind:2.6.7"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.7"
+    compile "javax.validation:validation-api:1.1.0.Final"
+
+    compile "org.embulk:embulk-util-ssl:0.3.0"
+    compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
+    compile "org.bouncycastle:bcpkix-jdk15on:1.52"
+
+    compile "org.embulk:embulk-util-file:0.1.1"
+    compile "org.embulk:embulk-util-retryhelper:0.8.0"
+
+    testCompile "junit:junit:4.13"
+    testCompile "org.embulk:embulk-core:0.10.19"
+    testCompile "org.embulk:embulk-core:0.10.19:tests"
+    testCompile "org.embulk:embulk-standards:0.10.19"
+    testCompile "org.embulk:embulk-deps:0.10.19"
+}
+
+embulkPlugin {
+    mainClass = "org.embulk.input.ftp.FtpFileInputPlugin"
+    category = "input"
+    type = "ftp"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {  // Publish it with "publishMavenPublicationToMavenCentralRepository".
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+        }
     }
-    checkstyleTest {
-        configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-        ignoreFailures = true
+
+    // TODO: Release it as a Maven artifact once the source of ftp4j is cleared.
+}
+
+gem {
+    authors = [ "Sadayuki Furuhashi" ]
+    email = [ "frsyuki@gmail.com" ]
+    summary = "FTP file input plugin for Embulk"
+    homepage = "https://github.com/embulk/embulk-input-ftp"
+    licenses = [ "Apache-2.0" ]
+    into("classpath/") {
+        from "${project.rootDir}/libs/ftp4j-1.7.2.jar"
     }
-    task checkstyle(type: Checkstyle) {
-        classpath = sourceSets.main.output + sourceSets.test.output
-        source = sourceSets.main.allJava + sourceSets.test.allJava
-    }
+}
+
+gemPush {
+    host = "https://rubygems.org"
+}
+
+checkstyle {
+    configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
+    toolVersion = '6.14.1'
+}
+checkstyleMain {
+    configFile = file("${project.rootDir}/config/checkstyle/default.xml")
+    ignoreFailures = true
+}
+checkstyleTest {
+    configFile = file("${project.rootDir}/config/checkstyle/default.xml")
+    ignoreFailures = true
+}
+task checkstyle(type: Checkstyle) {
+    classpath = sourceSets.main.output + sourceSets.test.output
+    source = sourceSets.main.allJava + sourceSets.test.allJava
 }
