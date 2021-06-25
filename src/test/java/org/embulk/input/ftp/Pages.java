@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnVisitor;
+import org.embulk.spi.Exec;
 import org.embulk.spi.Page;
 import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
@@ -26,7 +27,7 @@ class Pages
     {
         final ArrayList<Object[]> builder = new ArrayList<>();
         Iterator<Page> ite = pages.iterator();
-        try (PageReader reader = new PageReader(schema)) {
+        try (PageReader reader = Exec.getPageReader(schema)) {
             while (ite.hasNext()) {
                 reader.setPage(ite.next());
                 while (reader.nextRecord()) {

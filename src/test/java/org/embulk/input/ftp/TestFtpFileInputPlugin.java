@@ -43,12 +43,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestFtpFileInputPlugin
 {
-    private static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder()
-            .addDefaultModules()
-            .addModule(new TypeModule())
-            .addModule(new ColumnModule())
-            .addModule(new SchemaModule())
-            .build();
+    private static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder().addDefaultModules().build();
 
     private static String FTP_TEST_HOST;
     private static Integer FTP_TEST_PORT;
@@ -115,7 +110,7 @@ public class TestFtpFileInputPlugin
         final PluginTask task = configMapper.map(config(), PluginTask.class);
         task.setSSLConfig(sslConfig(task));
         task.setFiles(Arrays.asList("in/aa/a"));
-        final ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
+        final ConfigDiff configDiff = plugin.resume(task.toTaskSource(), 0, new FileInputPlugin.Control()
         {
             @Override
             public List<TaskReport> run(final TaskSource taskSource, final int taskCount)
@@ -131,7 +126,7 @@ public class TestFtpFileInputPlugin
     {
         final ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
         final PluginTask task = configMapper.map(config(), PluginTask.class);
-        plugin.cleanup(task.dump(), 0, Lists.<TaskReport>newArrayList()); // no errors happens
+        plugin.cleanup(task.toTaskSource(), 0, Lists.<TaskReport>newArrayList()); // no errors happens
     }
 
     @Test
