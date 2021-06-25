@@ -1,4 +1,4 @@
-package org.embulk.input;
+package org.embulk.input.ftp;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -8,7 +8,7 @@ import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.input.FtpFileInputPlugin.PluginTask;
+import org.embulk.input.ftp.FtpFileInputPlugin.PluginTask;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileInputRunner;
 import org.embulk.spi.InputPlugin;

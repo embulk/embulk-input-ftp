@@ -1,4 +1,4 @@
-package org.embulk.input;
+package org.embulk.input.ftp;
 
 import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPClient;
@@ -28,7 +28,6 @@ import org.embulk.util.config.TaskMapper;
 import org.embulk.util.file.InputStreamFileInput;
 import org.embulk.util.file.InputStreamFileInput.InputStreamWithHints;
 import org.embulk.util.file.ResumableInputStream;
-import org.embulk.util.ftp.BlockingTransfer;
 import org.embulk.util.ftp.SSLPlugins;
 import org.embulk.util.ftp.SSLPlugins.SSLPluginConfig;
 import org.embulk.util.retryhelper.RetryExecutor;

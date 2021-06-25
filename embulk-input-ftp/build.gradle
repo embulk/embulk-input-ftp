@@ -33,7 +33,7 @@ dependencies {
 }
 
 embulkPlugin {
-    mainClass = "org.embulk.input.FtpFileInputPlugin"
+    mainClass = "org.embulk.input.ftp.FtpFileInputPlugin"
     category = "input"
     type = "ftp"
 }

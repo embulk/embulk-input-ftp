@@ -1,4 +1,4 @@
-package org.embulk.util.ftp;
+package org.embulk.input.ftp;
 
 public class TestBlockingTransfer
 {
