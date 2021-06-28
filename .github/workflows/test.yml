@@ -1,0 +1,21 @@
+name: Test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: 8
+          distribution: "zulu"
+      - run: docker-compose up -d
+      - run: docker-compose ps
+      - name: Check
+        run: ./gradlew check --stacktrace --info
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: tests
+          path: ./*/build/reports/tests/test
