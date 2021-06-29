@@ -8,6 +8,9 @@ plugins {
 
 repositories {
     mavenCentral()
+
+    // Tests need EmbulkTestRuntime. EmbulkTestRuntime needs old-style embulk-standards till 0.10.28. 0.10.28 needs jcenter.
+    // Tests call FileInputRunner directly. FileInputRunner needs old-style plugin architecture like 0.10.19. 0.10.19 needs jcenter.
     jcenter()
 }
 
@@ -18,13 +21,23 @@ description = "Reads files stored on a FTP server."
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+    options.encoding = "UTF-8"
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 dependencies {
     compileOnly "org.embulk:embulk-api:0.10.19"
     compileOnly "org.embulk:embulk-spi:0.10.19"
 
     compile("org.embulk:embulk-util-config:0.3.1") {
         // They conflict with embulk-core. They are once excluded here,
-        // and added explicitly with versions exactly the same with embulk-core:0.10.31.
+        // and added explicitly with versions exactly the same with embulk-core:0.10.19.
         exclude group: "com.fasterxml.jackson.core", module: "jackson-annotations"
         exclude group: "com.fasterxml.jackson.core", module: "jackson-core"
         exclude group: "com.fasterxml.jackson.core", module: "jackson-databind"
@@ -33,7 +46,7 @@ dependencies {
     }
 
     // They are once excluded from transitive dependencies of other dependencies,
-    // and added explicitly with versions exactly the same with embulk-core:0.10.31.
+    // and added explicitly with versions exactly the same with embulk-core:0.10.19.
     compile "com.fasterxml.jackson.core:jackson-annotations:2.6.7"
     compile "com.fasterxml.jackson.core:jackson-core:2.6.7"
     compile "com.fasterxml.jackson.core:jackson-databind:2.6.7"
@@ -44,10 +57,10 @@ dependencies {
     compile files("${project.rootDir}/libs/ftp4j-1.7.2.jar")
     compile "org.bouncycastle:bcpkix-jdk15on:1.52"
 
-    compile "org.embulk:embulk-util-file:0.1.1"
-    compile "org.embulk:embulk-util-retryhelper:0.8.0"
+    compile "org.embulk:embulk-util-file:0.1.3"
+    compile "org.embulk:embulk-util-retryhelper:0.8.2"
 
-    testCompile "junit:junit:4.13"
+    testCompile "junit:junit:4.13.2"
     testCompile "org.embulk:embulk-core:0.10.19"
     testCompile "org.embulk:embulk-core:0.10.19:tests"
     testCompile "org.embulk:embulk-standards:0.10.19"
@@ -60,14 +73,57 @@ embulkPlugin {
     type = "ftp"
 }
 
+javadoc {
+    options {
+        locale = "en_US"
+        encoding = "UTF-8"
+    }
+}
+
 publishing {
     publications {
-        maven(MavenPublication) {  // Publish it with "publishMavenPublicationToMavenCentralRepository".
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+
             from components.java  // Must be "components.java". The dependency modification works only for it.
+            // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
+            // See: https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPluginExtension.html
+
+            pom {  // https://central.sonatype.org/pages/requirements.html
+                packaging "jar"
+
+                name = project.name
+                description = project.description
+                url = "https://www.embulk.org/"
+
+                licenses {
+                    license {
+                        // http://central.sonatype.org/pages/requirements.html#license-information
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                developers {
+                }
+
+                scm {
+                    connection = "scm:git:git://github.com/embulk/embulk-input-ftp.git"
+                    developerConnection = "scm:git:git@github.com:embulk/embulk-input-ftp.git"
+                    url = "https://github.com/embulk/embulk-input-ftp"
+                }
+            }
         }
     }
 
-    // TODO: Release it as a Maven artifact once the source of ftp4j is cleared.
+    repositories {
+        // It is not ready to release into Maven Central while FTP4J:1.7.2 is not available in Maven Central.
+    }
+}
+
+signing {
+    sign publishing.publications.maven
 }
 
 gem {

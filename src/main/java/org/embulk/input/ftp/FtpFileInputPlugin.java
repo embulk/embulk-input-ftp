@@ -143,7 +143,7 @@ public class FtpFileInputPlugin
         // TODO what if task.getFiles().isEmpty()?
 
         // number of processors is same with number of files
-        return resume(task.dump(), task.getFiles().size(), control);
+        return resume(task.toTaskSource(), task.getFiles().size(), control);
     }
 
     @Override
