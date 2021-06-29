@@ -13,4 +13,4 @@ services:
       - "11021:21"
       - "65000-65004:65000-65004"
     volumes:
-      - ./embulk-input-ftp/src/test/resources:/data/scott/unittest
+      - ./src/test/resources:/data/scott/unittest
