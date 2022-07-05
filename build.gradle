@@ -3,7 +3,7 @@ plugins {
     id "maven-publish"
     id "signing"
     id "checkstyle"
-    id "org.embulk.embulk-plugins" version "0.4.2"
+    id "org.embulk.embulk-plugins" version "0.5.2"
 }
 
 repositories {
@@ -71,6 +71,17 @@ embulkPlugin {
     mainClass = "org.embulk.input.ftp.FtpFileInputPlugin"
     category = "input"
     type = "ftp"
+
+    // "it.sauronsoftware:ftp4j:1.7.2" is not released in Maven Central, then,
+    // developers cannot build embulk-input-ftp with the depencency configuration.
+    //
+    // But, pom.xml is used also for a Maven-based plugin installation and loading.
+    // If an Embulk user specifies an appropriate Maven repository (ex. their own)
+    // which has "it.sauronsoftware:ftp4j:1.7.2" when installing embulk-input-ftp,
+    // they can use the Embulk plugin embulk-input-ftp.
+    additionalDependencyDeclarations = [
+        [ groupId: "it.sauronsoftware", artifactId: "ftp4j", version: "1.7.2", scope: "compile" ],
+    ]
 }
 
 javadoc {
