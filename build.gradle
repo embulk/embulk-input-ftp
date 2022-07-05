@@ -8,10 +8,6 @@ plugins {
 
 repositories {
     mavenCentral()
-
-    // Tests need EmbulkTestRuntime. EmbulkTestRuntime needs old-style embulk-standards till 0.10.28. 0.10.28 needs jcenter.
-    // Tests call FileInputRunner directly. FileInputRunner needs old-style plugin architecture like 0.10.19. 0.10.19 needs jcenter.
-    jcenter()
 }
 
 group = "org.embulk"
@@ -32,12 +28,12 @@ java {
 }
 
 dependencies {
-    compileOnly "org.embulk:embulk-api:0.10.19"
-    compileOnly "org.embulk:embulk-spi:0.10.19"
+    compileOnly "org.embulk:embulk-api:0.10.29"
+    compileOnly "org.embulk:embulk-spi:0.10.29"
 
     compile("org.embulk:embulk-util-config:0.3.1") {
         // They conflict with embulk-core. They are once excluded here,
-        // and added explicitly with versions exactly the same with embulk-core:0.10.19.
+        // and added explicitly with versions exactly the same with embulk-core:0.10.29.
         exclude group: "com.fasterxml.jackson.core", module: "jackson-annotations"
         exclude group: "com.fasterxml.jackson.core", module: "jackson-core"
         exclude group: "com.fasterxml.jackson.core", module: "jackson-databind"
@@ -46,7 +42,7 @@ dependencies {
     }
 
     // They are once excluded from transitive dependencies of other dependencies,
-    // and added explicitly with versions exactly the same with embulk-core:0.10.19.
+    // and added explicitly with versions exactly the same with embulk-core:0.10.29.
     compile "com.fasterxml.jackson.core:jackson-annotations:2.6.7"
     compile "com.fasterxml.jackson.core:jackson-core:2.6.7"
     compile "com.fasterxml.jackson.core:jackson-databind:2.6.7"
