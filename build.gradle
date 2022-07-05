@@ -117,6 +117,30 @@ publishing {
                 }
 
                 developers {
+                    developer {
+                        name = "Sadayuki Furuhashi"
+                        email = "frsyuki@gmail.com"
+                    }
+                    developer {
+                        name = "Muga Nishizawa"
+                        email = "muga.nishizawa@gmail.com"
+                    }
+                    developer {
+                        name = "Satoshi Akama"
+                        email = "satoshiakama@gmail.com"
+                    }
+                    developer {
+                        name = "Dai MIKURUBE"
+                        email = "dmikurube@treasure-data.com"
+                    }
+                    developer {
+                        name = "Shinichi Ishimura"
+                        email = "shiketaudonko41@gmail.com"
+                    }
+                    developer {
+                        name = "Phu Nguyen"
+                        email = "phu@treasure-data.com"
+                    }
                 }
 
                 scm {
@@ -129,7 +153,19 @@ publishing {
     }
 
     repositories {
-        // It is not ready to release into Maven Central while FTP4J:1.7.2 is not available in Maven Central.
+        maven {  // publishMavenPublicationToMavenCentralRepository
+            name = "mavenCentral"
+            if (project.version.endsWith("-SNAPSHOT")) {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? ossrhUsername : ""
+                password = project.hasProperty("ossrhPassword") ? ossrhPassword : ""
+            }
+        }
     }
 }
 
